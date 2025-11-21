@@ -11,6 +11,7 @@ import { useSOSSettings } from '@/hooks/useSOSSettings';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
 import { sendSOSMessages } from '@/utils/sms';
 import { toast } from '@/hooks/use-toast';
+import alfa22Logo from '@/assets/alfa22-logo.png';
 
 const Index = () => {
   const {
@@ -65,12 +66,24 @@ const Index = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-2 pt-6"
+          className="text-center space-y-4 pt-6"
         >
-          <h1 className="text-4xl font-bold bg-gradient-emergency bg-clip-text text-transparent">
-            Alfa22 SOS
-          </h1>
-          <p className="text-muted-foreground">Emergency shake detection system</p>
+          <div className="flex justify-center">
+            <motion.img
+              src={alfa22Logo}
+              alt="Alfa22 Security Logo"
+              className="w-32 h-32 object-contain"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, type: "spring" }}
+            />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-emergency bg-clip-text text-transparent">
+              Alfa22 SOS
+            </h1>
+            <p className="text-muted-foreground">Emergency shake detection system</p>
+          </div>
         </motion.div>
 
         {/* Power Button */}
