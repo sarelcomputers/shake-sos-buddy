@@ -57,6 +57,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        emergency: "hsl(var(--emergency))",
+        "emergency-glow": "hsl(var(--emergency-glow))",
+        warning: "hsl(var(--warning))",
+        success: "hsl(var(--success))",
+        safe: "hsl(var(--safe))",
+      },
+      backgroundImage: {
+        'gradient-emergency': 'var(--gradient-emergency)',
+        'gradient-safe': 'var(--gradient-safe)',
+      },
+      boxShadow: {
+        'emergency': 'var(--shadow-emergency)',
+        'glow': 'var(--shadow-glow)',
       },
       borderRadius: {
         lg: "var(--radius)",
