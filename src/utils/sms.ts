@@ -4,6 +4,7 @@ import { SmsManager } from '@byteowls/capacitor-sms';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
 import { supabase } from '@/integrations/supabase/client';
+import { VoiceRecorder, blobToBase64 } from './voiceRecorder';
 
 export const sendSOSMessages = async (
   message: string, 
@@ -60,6 +61,44 @@ export const sendSOSMessages = async (
       console.error('Failed to capture device info:', deviceError);
     }
 
+    // Start voice recording (2 minutes)
+    let audioTranscript = null;
+    let audioDurationSeconds = null;
+    
+    const voiceRecorder = new VoiceRecorder();
+
+    console.log('Starting 2-minute voice recording for emergency context...');
+    const recordingPromise = voiceRecorder.startRecording(120000) // 2 minutes
+      .then(async (audioBlob) => {
+        console.log('Voice recording completed, transcribing...');
+        audioDurationSeconds = 120; // 2 minutes
+
+        try {
+          // Convert audio to base64
+          const base64Audio = await blobToBase64(audioBlob);
+
+          // Send to transcription edge function
+          const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke(
+            'transcribe-audio',
+            {
+              body: { audio: base64Audio }
+            }
+          );
+
+          if (transcriptionError) {
+            console.error('Transcription error:', transcriptionError);
+          } else if (transcriptionData?.text) {
+            audioTranscript = transcriptionData.text;
+            console.log('Transcription successful:', audioTranscript.substring(0, 100) + '...');
+          }
+        } catch (transcriptionError) {
+          console.error('Failed to transcribe audio:', transcriptionError);
+        }
+      })
+      .catch((error) => {
+        console.error('Voice recording failed:', error);
+      });
+
     // Fetch personal information
     let personalInfo = null;
     if (userId) {
@@ -78,6 +117,28 @@ export const sendSOSMessages = async (
       }
     }
 
+    // Wait for voice recording to complete (run in background)
+    recordingPromise.finally(() => {
+      // Update the history with transcription if available
+      if (userId && (audioTranscript || audioDurationSeconds)) {
+        supabase.from('sos_history')
+          .update({
+            audio_transcript: audioTranscript,
+            audio_duration_seconds: audioDurationSeconds
+          })
+          .eq('user_id', userId)
+          .order('triggered_at', { ascending: false })
+          .limit(1)
+          .then(({ error }) => {
+            if (error) {
+              console.error('Failed to update audio transcription:', error);
+            } else {
+              console.log('Audio transcription saved to history');
+            }
+          });
+      }
+    });
+
     // Log to history if user is authenticated
     if (userId) {
       try {
@@ -93,10 +154,12 @@ export const sendSOSMessages = async (
           network_isp: networkInfo?.connectionType || null,
           ip_address: null, // IP address not directly available from Capacitor
           wifi_info: wifiInfo,
-          personal_info: personalInfo || {}
+          personal_info: personalInfo || {},
+          audio_transcript: null, // Will be updated when recording completes
+          audio_duration_seconds: null
         });
 
-        // Send notification email to control room
+        // Send notification email to control room (note: transcript will be sent separately when available)
         try {
           const { error: emailError } = await supabase.functions.invoke('send-sos-notification', {
             body: {
@@ -110,6 +173,8 @@ export const sendSOSMessages = async (
               wifiInfo,
               contactsCount: contacts.length,
               personalInfo: personalInfo || null,
+              audioTranscript: null, // Will be available after 2 minutes
+              audioDurationSeconds: null
             }
           });
 

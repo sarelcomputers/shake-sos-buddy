@@ -13,7 +13,7 @@ import { AlertAnalytics } from '@/components/AlertAnalytics';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle, Download, Calendar as CalendarIcon, Send, Mail, UserCircle } from 'lucide-react';
+import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle, Download, Calendar as CalendarIcon, Send, Mail, UserCircle, Mic } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,8 @@ interface SOSAlert {
   device_serial: string | null;
   network_isp: string | null;
   wifi_info: { ssid: string; connected: boolean } | null;
+  audio_transcript: string | null;
+  audio_duration_seconds: number | null;
   personal_info?: {
     name?: string;
     surname?: string;
@@ -590,6 +592,23 @@ export default function ControlRoom() {
                           </div>
                         )}
 
+                        {alert.audio_transcript && (
+                          <div>
+                            <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                              <Mic className="h-4 w-4" />
+                              Audio Transcript
+                            </p>
+                            <p className="text-xs text-muted-foreground italic line-clamp-3">
+                              "{alert.audio_transcript}"
+                            </p>
+                            {alert.audio_duration_seconds && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Duration: {Math.floor(alert.audio_duration_seconds / 60)}:{(alert.audio_duration_seconds % 60).toString().padStart(2, '0')}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
                         {alert.personal_info && Object.keys(alert.personal_info).length > 0 && (
                           <div>
                             <p className="text-sm font-semibold mb-1 flex items-center gap-2">
@@ -840,6 +859,23 @@ export default function ControlRoom() {
                   {selectedAlert.wifi_info && (
                     <div>
                       <strong>WiFi:</strong> {selectedAlert.wifi_info.ssid}
+                    </div>
+                  )}
+
+                  {selectedAlert.audio_transcript && (
+                    <div className="pt-3 border-t">
+                      <h3 className="font-semibold mb-2 flex items-center gap-2">
+                        <Mic className="h-4 w-4" />
+                        Audio Recording
+                      </h3>
+                      <div className="bg-muted/50 p-3 rounded-md">
+                        <p className="text-sm italic">"{selectedAlert.audio_transcript}"</p>
+                        {selectedAlert.audio_duration_seconds && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Duration: {Math.floor(selectedAlert.audio_duration_seconds / 60)}:{(selectedAlert.audio_duration_seconds % 60).toString().padStart(2, '0')}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
