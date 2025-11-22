@@ -2,3 +2,6 @@ project_id = "cglsnlsasnveypwmguee"
 
 [functions.send-sos-sms]
 verify_jwt = false
+
+[functions.payfast-webhook]
+verify_jwt = false
