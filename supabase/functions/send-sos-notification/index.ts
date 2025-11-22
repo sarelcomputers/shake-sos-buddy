@@ -52,6 +52,11 @@ serve(async (req) => {
     const personalInfoSection = data.personalInfo ? `
       <div class="section">
         <h3>Personal Information</h3>
+        ${data.personalInfo.photo_url ? `
+        <div style="text-align: center; margin-bottom: 15px;">
+          <img src="${data.personalInfo.photo_url}" alt="Profile Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #dc2626;" />
+        </div>
+        ` : ''}
         ${data.personalInfo.name ? `
         <div class="info-row">
           <span class="label">Name:</span>

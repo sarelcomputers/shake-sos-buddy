@@ -49,6 +49,7 @@ interface SOSAlert {
     vehicle_brand?: string;
     vehicle_color?: string;
     vehicle_registration?: string;
+    photo_url?: string;
   };
   profiles?: {
     email: string;
@@ -595,6 +596,15 @@ export default function ControlRoom() {
                               <UserCircle className="h-4 w-4" />
                               Personal Info
                             </p>
+                            {alert.personal_info.photo_url && (
+                              <div className="mb-2">
+                                <img 
+                                  src={alert.personal_info.photo_url} 
+                                  alt="Profile" 
+                                  className="w-16 h-16 rounded-full object-cover border-2 border-primary"
+                                />
+                              </div>
+                            )}
                             {alert.personal_info.name && (
                               <p className="text-xs text-muted-foreground">
                                 {alert.personal_info.name} {alert.personal_info.surname || ''}
@@ -839,6 +849,15 @@ export default function ControlRoom() {
                         <UserCircle className="h-4 w-4" />
                         Personal Information
                       </h3>
+                      {selectedAlert.personal_info.photo_url && (
+                        <div className="mb-3">
+                          <img 
+                            src={selectedAlert.personal_info.photo_url} 
+                            alt="Profile" 
+                            className="w-24 h-24 rounded-full object-cover border-2 border-primary"
+                          />
+                        </div>
+                      )}
                       {selectedAlert.personal_info.name && (
                         <div><strong>Name:</strong> {selectedAlert.personal_info.name} {selectedAlert.personal_info.surname || ''}</div>
                       )}
