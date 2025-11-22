@@ -10,9 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { MapView } from '@/components/MapView';
 import { ClusterMapView } from '@/components/ClusterMapView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import * as XLSX from 'xlsx';
 
 interface SOSAlert {
   id: string;
@@ -41,6 +45,8 @@ export default function ControlRoom() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAlert, setSelectedAlert] = useState<SOSAlert | null>(null);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   // Check admin access
   useEffect(() => {
@@ -138,27 +144,44 @@ export default function ControlRoom() {
     };
   }, [user, isAdmin]);
 
-  // Filter alerts based on search
+  // Filter alerts based on search and date range
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredAlerts(alerts);
-      return;
+    let filtered = alerts;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((alert) => {
+        return (
+          alert.profiles?.email?.toLowerCase().includes(query) ||
+          alert.message.toLowerCase().includes(query) ||
+          alert.device_model?.toLowerCase().includes(query) ||
+          alert.device_serial?.toLowerCase().includes(query) ||
+          alert.network_isp?.toLowerCase().includes(query) ||
+          alert.wifi_info?.ssid?.toLowerCase().includes(query)
+        );
+      });
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = alerts.filter((alert) => {
-      return (
-        alert.profiles?.email?.toLowerCase().includes(query) ||
-        alert.message.toLowerCase().includes(query) ||
-        alert.device_model?.toLowerCase().includes(query) ||
-        alert.device_serial?.toLowerCase().includes(query) ||
-        alert.network_isp?.toLowerCase().includes(query) ||
-        alert.wifi_info?.ssid?.toLowerCase().includes(query)
-      );
-    });
+    // Apply date range filter
+    if (dateFrom) {
+      filtered = filtered.filter((alert) => {
+        const alertDate = new Date(alert.triggered_at);
+        return alertDate >= dateFrom;
+      });
+    }
+
+    if (dateTo) {
+      filtered = filtered.filter((alert) => {
+        const alertDate = new Date(alert.triggered_at);
+        const endOfDay = new Date(dateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        return alertDate <= endOfDay;
+      });
+    }
 
     setFilteredAlerts(filtered);
-  }, [searchQuery, alerts]);
+  }, [searchQuery, alerts, dateFrom, dateTo]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -169,6 +192,88 @@ export default function ControlRoom() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const exportToCSV = () => {
+    if (filteredAlerts.length === 0) {
+      toast.error('No alerts to export');
+      return;
+    }
+
+    const csvData = filteredAlerts.map((alert) => ({
+      'Timestamp': formatDate(alert.triggered_at),
+      'User Email': alert.profiles?.email || 'Unknown',
+      'User ID': alert.user_id,
+      'Message': alert.message,
+      'Latitude': alert.latitude,
+      'Longitude': alert.longitude,
+      'Contacts Notified': alert.contacts_count,
+      'Contact Names': alert.contacted_recipients.map(c => c.name).join(', '),
+      'Contact Phones': alert.contacted_recipients.map(c => c.phone).join(', '),
+      'Device Model': alert.device_model || 'N/A',
+      'Device Serial': alert.device_serial || 'N/A',
+      'Network ISP': alert.network_isp || 'N/A',
+      'WiFi SSID': alert.wifi_info?.ssid || 'N/A',
+      'WiFi Connected': alert.wifi_info?.connected ? 'Yes' : 'No',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(csvData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'SOS Alerts');
+
+    const dateRange = dateFrom || dateTo 
+      ? `_${dateFrom ? format(dateFrom, 'yyyy-MM-dd') : 'start'}_to_${dateTo ? format(dateTo, 'yyyy-MM-dd') : 'end'}`
+      : '';
+    
+    XLSX.writeFile(workbook, `sos_alerts${dateRange}_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`, { bookType: 'csv' });
+    toast.success(`Exported ${filteredAlerts.length} alerts to CSV`);
+  };
+
+  const exportToExcel = () => {
+    if (filteredAlerts.length === 0) {
+      toast.error('No alerts to export');
+      return;
+    }
+
+    const excelData = filteredAlerts.map((alert) => ({
+      'Timestamp': formatDate(alert.triggered_at),
+      'User Email': alert.profiles?.email || 'Unknown',
+      'User ID': alert.user_id,
+      'Message': alert.message,
+      'Latitude': alert.latitude,
+      'Longitude': alert.longitude,
+      'Google Maps Link': `https://maps.google.com/?q=${alert.latitude},${alert.longitude}`,
+      'Contacts Notified': alert.contacts_count,
+      'Contact Details': alert.contacted_recipients.map(c => `${c.name}: ${c.phone}`).join('\n'),
+      'Device Model': alert.device_model || 'N/A',
+      'Device Serial': alert.device_serial || 'N/A',
+      'Network ISP': alert.network_isp || 'N/A',
+      'WiFi SSID': alert.wifi_info?.ssid || 'N/A',
+      'WiFi Connected': alert.wifi_info?.connected ? 'Yes' : 'No',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    
+    // Auto-size columns
+    const maxWidth = 50;
+    const colWidths = Object.keys(excelData[0] || {}).map((key) => {
+      const maxLength = Math.max(
+        key.length,
+        ...excelData.map((row) => String(row[key as keyof typeof row]).length)
+      );
+      return { wch: Math.min(maxLength + 2, maxWidth) };
+    });
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'SOS Alerts');
+
+    const dateRange = dateFrom || dateTo 
+      ? `_${dateFrom ? format(dateFrom, 'yyyy-MM-dd') : 'start'}_to_${dateTo ? format(dateTo, 'yyyy-MM-dd') : 'end'}`
+      : '';
+    
+    XLSX.writeFile(workbook, `sos_alerts${dateRange}_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.xlsx`);
+    toast.success(`Exported ${filteredAlerts.length} alerts to Excel`);
   };
 
   if (adminLoading || loading) {
@@ -205,8 +310,9 @@ export default function ControlRoom() {
           </Badge>
         </div>
 
-        {/* Search Bar */}
-        <Card className="p-4">
+        {/* Filters and Export */}
+        <Card className="p-4 space-y-4">
+          {/* Search Bar */}
           <div className="flex items-center gap-2">
             <Search className="h-5 w-5 text-muted-foreground" />
             <Input
@@ -224,6 +330,100 @@ export default function ControlRoom() {
                 Clear
               </Button>
             )}
+          </div>
+
+          {/* Date Range and Export */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filter by date:</span>
+            </div>
+
+            {/* Date From */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, 'PPP') : 'From date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={setDateFrom}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* Date To */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "justify-start text-left font-normal",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, 'PPP') : 'To date'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={setDateTo}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {(dateFrom || dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDateFrom(undefined);
+                  setDateTo(undefined);
+                }}
+              >
+                Clear dates
+              </Button>
+            )}
+
+            <div className="ml-auto flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                disabled={filteredAlerts.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToExcel}
+                disabled={filteredAlerts.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export Excel
+              </Button>
+            </div>
           </div>
         </Card>
 
