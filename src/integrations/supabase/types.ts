@@ -69,6 +69,7 @@ export type Database = {
       }
       sos_history: {
         Row: {
+          contacted_recipients: Json
           contacts_count: number
           id: string
           latitude: number
@@ -78,6 +79,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          contacted_recipients?: Json
           contacts_count: number
           id?: string
           latitude: number
@@ -87,6 +89,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          contacted_recipients?: Json
           contacts_count?: number
           id?: string
           latitude?: number
