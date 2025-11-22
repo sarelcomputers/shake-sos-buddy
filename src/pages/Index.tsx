@@ -9,13 +9,16 @@ import { SettingsPanel } from '@/components/SettingsPanel';
 import { AddContactDialog } from '@/components/AddContactDialog';
 import { useSOSSettings } from '@/hooks/useSOSSettings';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
+import { useAuth } from '@/hooks/useAuth';
 import { sendSOSMessages } from '@/utils/sms';
 import { toast } from '@/hooks/use-toast';
 import alfa22Logo from '@/assets/alfa22-logo.png';
 
 const Index = () => {
+  const { user } = useAuth();
   const {
     settings,
+    loading,
     toggleEnabled,
     updateMessage,
     updateSensitivity,
@@ -55,7 +58,7 @@ const Index = () => {
         return;
       }
 
-      await sendSOSMessages(settings.message, settings.contacts);
+      await sendSOSMessages(settings.message, settings.contacts, user?.id);
       toast({
         title: "SOS Sent!",
         description: "Emergency messages sent to all contacts",
@@ -76,6 +79,14 @@ const Index = () => {
     onShake: handleSOS,
     enabled: settings.enabled,
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4 pb-8">
