@@ -57,6 +57,30 @@ Once you have admin privileges:
 - See subscription expiry dates
 - View revenue per user
 
+### Subscription Management
+Admins can manage individual user subscriptions with the following actions:
+
+#### 1. Update Status
+- Manually change subscription status to: Trial, Active, Cancelled, or Expired
+- Useful for resolving payment issues or handling special cases
+
+#### 2. Extend Trial
+- Add additional days (1-365) to a user's trial period
+- Extends the existing trial end date
+- Useful for promotional offers or customer support
+
+#### 3. Grant Free Access
+- Provide free active subscription for specified days (1-365)
+- Sets status to "active" with R0.00 amount
+- Creates a time-limited free access period
+- Perfect for partnerships, promotions, or customer rewards
+
+To manage a subscription:
+1. Find the user in the users table
+2. Click the "Manage" button in the Actions column
+3. Choose the desired action from the tabs
+4. Enter required information and confirm
+
 ## Security Notes
 
 - Admin access is controlled via the `user_roles` table with proper RLS policies

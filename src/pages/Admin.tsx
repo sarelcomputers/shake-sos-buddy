@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Users, DollarSign, TrendingUp, Filter, Search, Crown } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, TrendingUp, Filter, Search, Crown, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ManageSubscriptionDialog } from '@/components/ManageSubscriptionDialog';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -56,6 +57,8 @@ export default function Admin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [showManageDialog, setShowManageDialog] = useState(false);
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -134,6 +137,15 @@ export default function Admin() {
     }
 
     setFilteredUsers(filtered);
+  };
+
+  const handleManageSubscription = (user: UserData) => {
+    setSelectedUser(user);
+    setShowManageDialog(true);
+  };
+
+  const handleManageSuccess = () => {
+    fetchAdminData();
   };
 
   const getStatusColor = (status?: string) => {
@@ -342,6 +354,7 @@ export default function Admin() {
                       <TableHead>Joined</TableHead>
                       <TableHead>Expires</TableHead>
                       <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -366,6 +379,16 @@ export default function Admin() {
                             ? `R${(user.subscription.amount_cents / 100).toFixed(2)}`
                             : 'R0.00'}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleManageSubscription(user)}
+                          >
+                            <Settings className="w-4 h-4 mr-1" />
+                            Manage
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -375,6 +398,18 @@ export default function Admin() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Manage Subscription Dialog */}
+      {selectedUser && (
+        <ManageSubscriptionDialog
+          open={showManageDialog}
+          onOpenChange={setShowManageDialog}
+          userId={selectedUser.id}
+          userEmail={selectedUser.email}
+          currentStatus={selectedUser.subscription?.status}
+          onSuccess={handleManageSuccess}
+        />
+      )}
     </div>
   );
 }

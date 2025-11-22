@@ -224,7 +224,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      extend_trial: {
+        Args: { _days: number; _user_id: string }
+        Returns: undefined
+      }
       get_admin_stats: { Args: never; Returns: Json }
+      grant_free_access: {
+        Args: { _days: number; _user_id: string }
+        Returns: undefined
+      }
       has_active_subscription: { Args: { user_uuid: string }; Returns: boolean }
       has_role: {
         Args: {
@@ -232,6 +240,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_subscription_status: {
+        Args: { _status: string; _user_id: string }
+        Returns: undefined
       }
     }
     Enums: {
