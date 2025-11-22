@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
 import { SmsManager } from '@byteowls/capacitor-sms';
 import { Capacitor } from '@capacitor/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, MessageSquare, Smartphone, Battery, CheckCircle, AlertCircle, Mic, Camera, Users } from 'lucide-react';
+import { MessageSquare, Smartphone, Battery, CheckCircle, AlertCircle, Mic, Camera, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PermissionStatus {
-  location: 'pending' | 'granted' | 'denied';
   microphone: 'pending' | 'granted' | 'denied';
   camera: 'pending' | 'granted' | 'denied';
   contacts: 'pending' | 'granted' | 'denied';
@@ -19,7 +17,6 @@ interface PermissionStatus {
 
 export const PermissionsSetup = ({ onComplete }: { onComplete: () => void }) => {
   const [permissions, setPermissions] = useState<PermissionStatus>({
-    location: 'pending',
     microphone: 'pending',
     camera: 'pending',
     contacts: 'pending',
@@ -31,30 +28,6 @@ export const PermissionsSetup = ({ onComplete }: { onComplete: () => void }) => 
   const isNative = Capacitor.isNativePlatform();
 
   const steps = [
-    {
-      id: 'location',
-      icon: MapPin,
-      title: 'Location Access',
-      description: 'Allows the app to include your precise GPS coordinates in SOS messages so emergency contacts can find you quickly.',
-      action: async () => {
-        try {
-          const permission = await Geolocation.requestPermissions();
-          if (permission.location === 'granted') {
-            setPermissions(prev => ({ ...prev, location: 'granted' }));
-            toast.success('Location permission granted');
-            return true;
-          } else {
-            setPermissions(prev => ({ ...prev, location: 'denied' }));
-            toast.error('Location permission denied');
-            return false;
-          }
-        } catch (error) {
-          console.error('Location permission error:', error);
-          setPermissions(prev => ({ ...prev, location: 'denied' }));
-          return false;
-        }
-      },
-    },
     {
       id: 'microphone',
       icon: Mic,
