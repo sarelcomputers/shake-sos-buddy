@@ -1,7 +1,8 @@
 import { Geolocation } from '@capacitor/geolocation';
 import { Haptics, NotificationType } from '@capacitor/haptics';
+import { supabase } from '@/integrations/supabase/client';
 
-export const sendSOSMessages = async (message: string, contacts: Array<{ phone: string }>) => {
+export const sendSOSMessages = async (message: string, contacts: Array<{ phone: string; name: string }>) => {
   try {
     // Get current location
     const position = await Geolocation.getCurrentPosition({
@@ -10,18 +11,28 @@ export const sendSOSMessages = async (message: string, contacts: Array<{ phone: 
     });
 
     const { latitude, longitude } = position.coords;
-    const locationUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
-    const fullMessage = `${message}\n\n${locationUrl}`;
 
+    console.log('Sending SOS via backend to', contacts.length, 'contacts');
+
+    // Send SMS via backend edge function
+    const { data, error } = await supabase.functions.invoke('send-sos-sms', {
+      body: {
+        message,
+        contacts,
+        location: { latitude, longitude }
+      }
+    });
+
+    if (error) {
+      console.error('Failed to send SOS via backend:', error);
+      await Haptics.notification({ type: NotificationType.Error });
+      throw error;
+    }
+
+    console.log('SOS messages sent successfully:', data);
+    
     // Trigger success haptic
     await Haptics.notification({ type: NotificationType.Success });
-
-    // In a real app, you would use a native SMS plugin
-    // For now, we'll use the SMS URI scheme which works on Android
-    contacts.forEach(contact => {
-      const smsUrl = `sms:${contact.phone}?body=${encodeURIComponent(fullMessage)}`;
-      window.open(smsUrl, '_blank');
-    });
 
     return true;
   } catch (error) {
