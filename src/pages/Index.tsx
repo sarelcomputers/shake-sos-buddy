@@ -208,7 +208,7 @@ const Index = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="contacts" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
             <TabsTrigger value="contacts" className="flex items-center gap-1 text-xs sm:text-sm">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Contacts</span>
@@ -233,6 +233,16 @@ const Index = () => {
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">History</span>
             </TabsTrigger>
+            {!adminLoading && isAdmin && (
+              <TabsTrigger 
+                value="control-room" 
+                className="flex items-center gap-1 text-xs sm:text-sm"
+                onClick={() => navigate('/control-room')}
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Control</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="contacts" className="space-y-4 mt-6">
@@ -265,7 +275,7 @@ const Index = () => {
             <ProfileSettings />
             
             {!adminLoading && isAdmin && (
-              <div className="space-y-2 pt-4">
+              <div className="pt-4">
                 <Button
                   variant="outline"
                   className="w-full justify-start"
@@ -273,14 +283,6 @@ const Index = () => {
                 >
                   <Shield className="mr-2 h-4 w-4" />
                   Admin Dashboard
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="w-full justify-start"
-                  onClick={() => navigate('/control-room')}
-                >
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Control Room
                 </Button>
               </div>
             )}
