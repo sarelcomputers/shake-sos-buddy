@@ -71,32 +71,47 @@ export type Database = {
         Row: {
           contacted_recipients: Json
           contacts_count: number
+          device_model: string | null
+          device_serial: string | null
           id: string
+          ip_address: string | null
           latitude: number
           longitude: number
           message: string
+          network_isp: string | null
           triggered_at: string
           user_id: string
+          wifi_info: Json | null
         }
         Insert: {
           contacted_recipients?: Json
           contacts_count: number
+          device_model?: string | null
+          device_serial?: string | null
           id?: string
+          ip_address?: string | null
           latitude: number
           longitude: number
           message: string
+          network_isp?: string | null
           triggered_at?: string
           user_id: string
+          wifi_info?: Json | null
         }
         Update: {
           contacted_recipients?: Json
           contacts_count?: number
+          device_model?: string | null
+          device_serial?: string | null
           id?: string
+          ip_address?: string | null
           latitude?: number
           longitude?: number
           message?: string
+          network_isp?: string | null
           triggered_at?: string
           user_id?: string
+          wifi_info?: Json | null
         }
         Relationships: [
           {

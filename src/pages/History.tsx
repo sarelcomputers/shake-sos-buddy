@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, MapPin, Users, ArrowLeft, Map, List } from 'lucide-react';
+import { Clock, MapPin, Users, ArrowLeft, Map, List, Download, Smartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
+import jsPDF from 'jspdf';
 
 type SOSHistoryRow = Tables<'sos_history'>;
 
@@ -72,6 +73,98 @@ const History = () => {
     });
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    let yPosition = 20;
+
+    // Title
+    doc.setFontSize(18);
+    doc.text('Alfa22 SOS History Report', 20, yPosition);
+    yPosition += 10;
+
+    // Metadata
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, yPosition);
+    yPosition += 5;
+    doc.text(`Total Alerts: ${history.length}`, 20, yPosition);
+    yPosition += 15;
+
+    // History entries
+    history.forEach((entry, index) => {
+      // Check if we need a new page
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Alert #${index + 1}`, 20, yPosition);
+      yPosition += 7;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      
+      // Date & Time
+      doc.text(`Date: ${formatDate(entry.triggered_at)}`, 25, yPosition);
+      yPosition += 5;
+
+      // Location
+      doc.text(`Location: ${entry.latitude.toFixed(6)}, ${entry.longitude.toFixed(6)}`, 25, yPosition);
+      yPosition += 5;
+
+      // Message
+      doc.text(`Message: ${entry.message.substring(0, 80)}`, 25, yPosition);
+      yPosition += 5;
+
+      // Contacts
+      doc.text(`Contacts Notified: ${entry.contacts_count}`, 25, yPosition);
+      yPosition += 5;
+
+      // Device Information
+      if (entry.device_model) {
+        doc.text(`Device: ${entry.device_model}`, 25, yPosition);
+        yPosition += 5;
+      }
+
+      if (entry.device_serial) {
+        doc.text(`Serial: ${entry.device_serial}`, 25, yPosition);
+        yPosition += 5;
+      }
+
+      if (entry.network_isp) {
+        doc.text(`Network: ${entry.network_isp}`, 25, yPosition);
+        yPosition += 5;
+      }
+
+      if (entry.wifi_info) {
+        const wifiData = entry.wifi_info as { ssid?: string };
+        doc.text(`WiFi: ${wifiData.ssid || 'Unknown'}`, 25, yPosition);
+        yPosition += 5;
+      }
+
+      // Recipients
+      if (entry.contacted_recipients && entry.contacted_recipients.length > 0) {
+        doc.text('Recipients:', 25, yPosition);
+        yPosition += 5;
+        entry.contacted_recipients.forEach((recipient) => {
+          doc.text(`  - ${recipient.name} (${recipient.phone})`, 30, yPosition);
+          yPosition += 5;
+        });
+      }
+
+      yPosition += 5; // Space between entries
+    });
+
+    // Save the PDF
+    doc.save(`alfa22-sos-history-${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    toast({
+      title: 'PDF Exported',
+      description: 'SOS history has been exported successfully',
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -102,9 +195,20 @@ const History = () => {
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-lg px-4 py-2">
-            {history.length} {history.length === 1 ? 'Alert' : 'Alerts'}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={exportToPDF}
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={history.length === 0}
+            >
+              <Download className="w-4 h-4" />
+              Export PDF
+            </Button>
+            <Badge variant="outline" className="text-lg px-4 py-2">
+              {history.length} {history.length === 1 ? 'Alert' : 'Alerts'}
+            </Badge>
+          </div>
         </div>
 
         {history.length === 0 ? (
@@ -167,6 +271,16 @@ const History = () => {
                                 {recipient.name}
                               </Badge>
                             ))}
+                          </div>
+                        )}
+                        {(entry.device_model || entry.network_isp) && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2 pt-2 border-t">
+                            <Smartphone className="w-3 h-3" />
+                            <span>
+                              {entry.device_model && `${entry.device_model}`}
+                              {entry.device_model && entry.network_isp && ' • '}
+                              {entry.network_isp && `${entry.network_isp}`}
+                            </span>
                           </div>
                         )}
                       </CardContent>
