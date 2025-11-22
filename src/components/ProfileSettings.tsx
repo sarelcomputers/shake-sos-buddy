@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Save } from 'lucide-react';
+import { User, Mail, Lock, Save, Shield } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -87,6 +87,14 @@ export const ProfileSettings = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetPermissions = () => {
+    localStorage.removeItem('permissions_setup_complete');
+    toast.success('Permissions reset! Please reload the app to re-run setup.');
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
   };
 
   return (
@@ -221,6 +229,25 @@ export const ProfileSettings = () => {
               )}
             </Button>
           </form>
+
+          {/* Reset Permissions */}
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              <Label className="text-base font-semibold">App Permissions</Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Re-run the permissions setup to grant or update access to location, SMS, motion sensors, and battery optimization.
+            </p>
+            <Button
+              onClick={handleResetPermissions}
+              variant="outline"
+              className="w-full"
+            >
+              <Shield className="w-4 h-4 mr-2" />
+              Re-run Permissions Setup
+            </Button>
+          </div>
         </Card>
       </motion.div>
     </div>
