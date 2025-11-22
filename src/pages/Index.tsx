@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Power, Settings as SettingsIcon, Users, UserCircle, History, Shield, AlertCircle } from 'lucide-react';
+import { Power, Settings as SettingsIcon, Users, UserCircle, History, Shield, AlertCircle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,7 @@ import { SOSStatus } from '@/components/SOSStatus';
 import { ContactList } from '@/components/ContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
+import { PersonalInformation } from '@/components/PersonalInformation';
 import { AddContactDialog } from '@/components/AddContactDialog';
 import { PermissionsSetup } from '@/components/PermissionsSetup';
 import { SubscriptionGate } from '@/components/SubscriptionGate';
@@ -207,26 +208,30 @@ const Index = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="contacts" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="contacts" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="contacts" className="flex items-center gap-1 text-xs sm:text-sm">
               <Users className="w-4 h-4" />
-              Contacts
+              <span className="hidden sm:inline">Contacts</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
+            <TabsTrigger value="settings" className="flex items-center gap-1 text-xs sm:text-sm">
               <SettingsIcon className="w-4 h-4" />
-              Settings
+              <span className="hidden sm:inline">Settings</span>
             </TabsTrigger>
-            <TabsTrigger value="profile" className="flex items-center gap-2">
+            <TabsTrigger value="personal" className="flex items-center gap-1 text-xs sm:text-sm">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Personal</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-1 text-xs sm:text-sm">
               <UserCircle className="w-4 h-4" />
-              Profile
+              <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
             <TabsTrigger 
               value="history" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-1 text-xs sm:text-sm"
               onClick={() => navigate('/history')}
             >
               <History className="w-4 h-4" />
-              History
+              <span className="hidden sm:inline">History</span>
             </TabsTrigger>
           </TabsList>
 
@@ -250,6 +255,10 @@ const Index = () => {
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
             />
+          </TabsContent>
+
+          <TabsContent value="personal" className="space-y-4 mt-6">
+            <PersonalInformation />
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-4 mt-6">
