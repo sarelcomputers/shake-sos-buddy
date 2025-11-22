@@ -141,6 +141,8 @@ export type Database = {
       }
       sos_history: {
         Row: {
+          audio_duration_seconds: number | null
+          audio_transcript: string | null
           contacted_recipients: Json
           contacts_count: number
           device_model: string | null
@@ -157,6 +159,8 @@ export type Database = {
           wifi_info: Json | null
         }
         Insert: {
+          audio_duration_seconds?: number | null
+          audio_transcript?: string | null
           contacted_recipients?: Json
           contacts_count: number
           device_model?: string | null
@@ -173,6 +177,8 @@ export type Database = {
           wifi_info?: Json | null
         }
         Update: {
+          audio_duration_seconds?: number | null
+          audio_transcript?: string | null
           contacted_recipients?: Json
           contacts_count?: number
           device_model?: string | null
