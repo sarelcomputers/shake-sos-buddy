@@ -1,6 +1,8 @@
 import { Geolocation } from '@capacitor/geolocation';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { SmsManager } from '@byteowls/capacitor-sms';
+import { Device } from '@capacitor/device';
+import { Network } from '@capacitor/network';
 import { supabase } from '@/integrations/supabase/client';
 
 export const sendSOSMessages = async (
@@ -38,6 +40,26 @@ export const sendSOSMessages = async (
       throw error;
     }
 
+    // Capture device and network information
+    let deviceInfo = null;
+    let networkInfo = null;
+    let wifiInfo = null;
+
+    try {
+      deviceInfo = await Device.getInfo();
+      networkInfo = await Network.getStatus();
+      
+      // Capture WiFi information if available
+      if (networkInfo.connectionType === 'wifi') {
+        wifiInfo = {
+          ssid: networkInfo.ssid || 'Unknown',
+          connected: networkInfo.connected
+        };
+      }
+    } catch (deviceError) {
+      console.error('Failed to capture device info:', deviceError);
+    }
+
     // Log to history if user is authenticated
     if (userId) {
       try {
@@ -47,7 +69,12 @@ export const sendSOSMessages = async (
           latitude,
           longitude,
           contacts_count: contacts.length,
-          contacted_recipients: contacts.map(c => ({ name: c.name, phone: c.phone }))
+          contacted_recipients: contacts.map(c => ({ name: c.name, phone: c.phone })),
+          device_model: deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : null,
+          device_serial: deviceInfo?.identifier || null,
+          network_isp: networkInfo?.connectionType || null,
+          ip_address: null, // IP address not directly available from Capacitor
+          wifi_info: wifiInfo
         });
       } catch (historyError) {
         console.error('Failed to log SOS history:', historyError);
