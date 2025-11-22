@@ -46,6 +46,38 @@ export type Database = {
           },
         ]
       }
+      emergency_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_emails_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_info: {
         Row: {
           age: number | null
@@ -206,25 +238,31 @@ export type Database = {
       }
       sos_settings: {
         Row: {
+          email_message: string
           id: string
           message: string
           shake_sensitivity: string
+          test_email_message: string
           test_message: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          email_message?: string
           id?: string
           message?: string
           shake_sensitivity?: string
+          test_email_message?: string
           test_message?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          email_message?: string
           id?: string
           message?: string
           shake_sensitivity?: string
+          test_email_message?: string
           test_message?: string
           updated_at?: string
           user_id?: string
