@@ -66,10 +66,7 @@ export default function Subscription() {
 
     setCancelling(true);
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ status: 'cancelled' })
-        .eq('id', subscription.id);
+      const { error } = await supabase.rpc('cancel_own_subscription');
 
       if (error) throw error;
 

@@ -224,6 +224,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_own_subscription: { Args: never; Returns: undefined }
       extend_trial: {
         Args: { _days: number; _user_id: string }
         Returns: undefined
