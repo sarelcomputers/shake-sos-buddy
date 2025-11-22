@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Power, Settings as SettingsIcon, Users, UserCircle, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { ContactList } from '@/components/ContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { AddContactDialog } from '@/components/AddContactDialog';
+import { PermissionsSetup } from '@/components/PermissionsSetup';
 import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,8 +33,36 @@ const Index = () => {
   } = useSOSSettings();
 
   const [showAddContact, setShowAddContact] = useState(false);
+  const [permissionsComplete, setPermissionsComplete] = useState(false);
+
+  useEffect(() => {
+    // Check if user has completed permissions setup
+    const hasCompletedSetup = localStorage.getItem('permissions_setup_complete');
+    if (hasCompletedSetup === 'true') {
+      setPermissionsComplete(true);
+    }
+  }, []);
+
+  const handlePermissionsComplete = () => {
+    localStorage.setItem('permissions_setup_complete', 'true');
+    setPermissionsComplete(true);
+    toast({
+      title: "Setup Complete!",
+      description: "You're all set to use Alfa22 SOS",
+    });
+  };
 
   const handleToggle = () => {
+    // Check if permissions are complete before enabling
+    if (!permissionsComplete && !settings.enabled) {
+      toast({
+        title: "Setup Required",
+        description: "Please complete permissions setup first",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const willBeEnabled = !settings.enabled;
     toggleEnabled();
     
@@ -106,6 +135,11 @@ const Index = () => {
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
+  }
+
+  // Show permissions setup if not completed
+  if (!permissionsComplete) {
+    return <PermissionsSetup onComplete={handlePermissionsComplete} />;
   }
 
   return (
