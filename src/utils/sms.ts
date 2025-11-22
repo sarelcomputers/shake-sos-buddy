@@ -20,10 +20,68 @@ export const sendSOSMessages = async (
 
     const { latitude, longitude } = position.coords;
 
+    // Fetch personal information early
+    let personalInfo = null;
+    if (userId) {
+      try {
+        const { data: personalData } = await supabase
+          .from('personal_info')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        
+        if (personalData) {
+          personalInfo = personalData;
+        }
+      } catch (error) {
+        console.error('Failed to fetch personal info:', error);
+      }
+    }
+
     console.log('Sending SOS via device SMS to', contacts.length, 'contacts');
 
     const locationUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
-    const fullMessage = `${message}\n\nLocation: ${locationUrl}`;
+    
+    // Format personal information for SMS
+    let personalInfoText = '';
+    if (personalInfo) {
+      const parts = [];
+      
+      if (personalInfo.name || personalInfo.surname) {
+        parts.push(`Name: ${[personalInfo.name, personalInfo.surname].filter(Boolean).join(' ')}`);
+      }
+      if (personalInfo.age) parts.push(`Age: ${personalInfo.age}`);
+      if (personalInfo.gender) parts.push(`Gender: ${personalInfo.gender}`);
+      if (personalInfo.blood_type) parts.push(`Blood Type: ${personalInfo.blood_type}`);
+      
+      if (personalInfo.medical_aid_name) {
+        parts.push(`Medical Aid: ${personalInfo.medical_aid_name}${personalInfo.medical_aid_number ? ` (${personalInfo.medical_aid_number})` : ''}`);
+      }
+      
+      if (personalInfo.home_address) parts.push(`Address: ${personalInfo.home_address}`);
+      
+      if (personalInfo.vehicle_registration || personalInfo.vehicle_brand) {
+        const vehicle = [personalInfo.vehicle_brand, personalInfo.vehicle_color, personalInfo.vehicle_registration]
+          .filter(Boolean)
+          .join(' ');
+        parts.push(`Vehicle: ${vehicle}`);
+      }
+      
+      if (personalInfo.spouse_name && personalInfo.spouse_contact) {
+        parts.push(`Spouse: ${personalInfo.spouse_name} (${personalInfo.spouse_contact})`);
+      }
+      
+      if (personalInfo.friend_name && personalInfo.friend_contact) {
+        const friendName = [personalInfo.friend_name, personalInfo.friend_surname].filter(Boolean).join(' ');
+        parts.push(`Friend: ${friendName} (${personalInfo.friend_contact})`);
+      }
+      
+      if (parts.length > 0) {
+        personalInfoText = '\n\nPERSONAL INFO:\n' + parts.join('\n');
+      }
+    }
+    
+    const fullMessage = `${message}\n\nLocation: ${locationUrl}${personalInfoText}`;
 
     // Send SMS silently using device's native SMS capabilities
     try {
@@ -99,23 +157,7 @@ export const sendSOSMessages = async (
         console.error('Voice recording failed:', error);
       });
 
-    // Fetch personal information
-    let personalInfo = null;
-    if (userId) {
-      try {
-        const { data: personalData } = await supabase
-          .from('personal_info')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-        
-        if (personalData) {
-          personalInfo = personalData;
-        }
-      } catch (error) {
-        console.error('Failed to fetch personal info:', error);
-      }
-    }
+    // Personal info already fetched earlier for SMS content
 
     // Wait for voice recording to complete (run in background)
     recordingPromise.finally(() => {
