@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Save, Shield, Moon, Sun } from 'lucide-react';
+import { User, Mail, Lock, Save, Shield, Moon, Sun, CreditCard } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import { toast } from 'sonner';
 export const ProfileSettings = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -232,6 +234,22 @@ export const ProfileSettings = () => {
               )}
             </Button>
           </form>
+
+          {/* Subscription Management */}
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
+              <Label className="text-base font-semibold">Subscription</Label>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => navigate('/subscription')}
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              Manage Subscription & Billing
+            </Button>
+          </div>
 
           {/* Dark Mode Toggle */}
           <div className="space-y-3 pt-4 border-t">

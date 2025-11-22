@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import History from "./pages/History";
+import Subscription from "./pages/Subscription";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,11 @@ const App = () => (
             <Route path="/history" element={
               <ProtectedRoute>
                 <History />
+              </ProtectedRoute>
+            } />
+            <Route path="/subscription" element={
+              <ProtectedRoute>
+                <Subscription />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
