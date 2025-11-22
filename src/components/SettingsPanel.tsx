@@ -9,10 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 interface SettingsPanelProps {
   message: string;
   testMessage: string;
+  emailMessage: string;
+  testEmailMessage: string;
   sensitivity: number;
   shakeCount: number;
   onMessageChange: (message: string) => void;
   onTestMessageChange: (message: string) => void;
+  onEmailMessageChange: (message: string) => void;
+  onTestEmailMessageChange: (message: string) => void;
   onSensitivityChange: (sensitivity: number) => void;
   onShakeCountChange: (count: number) => void;
 }
@@ -20,10 +24,14 @@ interface SettingsPanelProps {
 export const SettingsPanel = ({
   message,
   testMessage,
+  emailMessage,
+  testEmailMessage,
   sensitivity,
   shakeCount,
   onMessageChange,
   onTestMessageChange,
+  onEmailMessageChange,
+  onTestEmailMessageChange,
   onSensitivityChange,
   onShakeCountChange,
 }: SettingsPanelProps) => {
@@ -41,18 +49,18 @@ export const SettingsPanel = ({
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
               <Label htmlFor="message" className="text-base font-semibold">
-                Emergency Message
+                Emergency Message (SMS)
               </Label>
             </div>
             <Textarea
               id="message"
               value={message}
               onChange={(e) => onMessageChange(e.target.value)}
-              placeholder="Enter your emergency message..."
+              placeholder="Enter your emergency SMS message..."
               className="min-h-[100px] resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              Your location will be automatically added to this message
+              This message will be sent via SMS with your location
             </p>
           </div>
 
@@ -60,18 +68,56 @@ export const SettingsPanel = ({
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
               <Label htmlFor="testMessage" className="text-base font-semibold">
-                Test Message
+                Test Message (SMS)
               </Label>
             </div>
             <Textarea
               id="testMessage"
               value={testMessage}
               onChange={(e) => onTestMessageChange(e.target.value)}
-              placeholder="Enter your test message..."
+              placeholder="Enter your test SMS message..."
               className="min-h-[100px] resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              This message will be sent when you test the system with a contact
+              This message will be sent when you test an SMS contact
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              <Label htmlFor="emailMessage" className="text-base font-semibold">
+                Emergency Message (Email)
+              </Label>
+            </div>
+            <Textarea
+              id="emailMessage"
+              value={emailMessage}
+              onChange={(e) => onEmailMessageChange(e.target.value)}
+              placeholder="Enter your emergency email message..."
+              className="min-h-[100px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              This message will be sent via email with your location and personal info
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              <Label htmlFor="testEmailMessage" className="text-base font-semibold">
+                Test Message (Email)
+              </Label>
+            </div>
+            <Textarea
+              id="testEmailMessage"
+              value={testEmailMessage}
+              onChange={(e) => onTestEmailMessageChange(e.target.value)}
+              placeholder="Enter your test email message..."
+              className="min-h-[100px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              This message will be sent when you test an email contact
             </p>
           </div>
 

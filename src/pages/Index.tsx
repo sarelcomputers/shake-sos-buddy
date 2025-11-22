@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SOSStatus } from '@/components/SOSStatus';
 import { ContactList } from '@/components/ContactList';
+import { EmailContactList, type EmailContact } from '@/components/EmailContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { PersonalInformation } from '@/components/PersonalInformation';
 import { AddContactDialog } from '@/components/AddContactDialog';
+import { AddEmailContactDialog } from '@/components/AddEmailContactDialog';
 import { PermissionsSetup } from '@/components/PermissionsSetup';
 import { SubscriptionGate } from '@/components/SubscriptionGate';
 import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
+import { supabase } from '@/integrations/supabase/client';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -32,13 +35,18 @@ const Index = () => {
     toggleEnabled,
     updateMessage,
     updateTestMessage,
+    updateEmailMessage,
+    updateTestEmailMessage,
     updateSensitivity,
     updateShakeCount,
     addContact,
     removeContact,
+    addEmailContact,
+    removeEmailContact,
   } = useSOSSettings();
 
   const [showAddContact, setShowAddContact] = useState(false);
+  const [showAddEmailContact, setShowAddEmailContact] = useState(false);
   const [permissionsComplete, setPermissionsComplete] = useState(false);
 
   useEffect(() => {
@@ -88,19 +96,28 @@ const Index = () => {
 
   const handleSOS = async () => {
     try {
-      if (settings.contacts.length === 0) {
+      if (settings.contacts.length === 0 && settings.emailContacts.length === 0) {
         toast({
           title: "No contacts added",
-          description: "Please add emergency contacts before activating SOS",
+          description: "Please add emergency contacts or emails before activating SOS",
           variant: "destructive",
         });
         return;
       }
 
-      await sendSOSMessages(settings.message, settings.contacts, user?.id);
+      // Send SMS if contacts exist
+      if (settings.contacts.length > 0) {
+        await sendSOSMessages(settings.message, settings.contacts, user?.id);
+      }
+
+      // Send emails if email contacts exist
+      if (settings.emailContacts.length > 0 && user?.id) {
+        await sendEmergencyEmails(settings.emailMessage, settings.emailContacts, user.id);
+      }
+
       toast({
         title: "SOS Sent!",
-        description: "Emergency messages sent to all contacts",
+        description: "Emergency alerts sent to all contacts",
       });
     } catch (error) {
       toast({
@@ -116,7 +133,7 @@ const Index = () => {
       await sendSOSMessages(settings.testMessage, [contact], user?.id);
       toast({
         title: "Test Message Sent!",
-        description: `Test SOS sent to ${contact.name}`,
+        description: `Test SMS sent to ${contact.name}`,
       });
     } catch (error) {
       toast({
@@ -124,6 +141,77 @@ const Index = () => {
         description: "Could not send test message. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleTestEmail = async (contact: EmailContact) => {
+    try {
+      await sendTestEmail(settings.testEmailMessage, contact);
+      toast({
+        title: "Test Email Sent!",
+        description: `Test email sent to ${contact.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Could not send test email. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendTestEmail = async (message: string, contact: EmailContact) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.functions.invoke('send-emergency-email', {
+      body: {
+        to: contact.email,
+        name: contact.name,
+        subject: '[TEST] Emergency Alert Test',
+        message: message,
+      },
+    });
+  };
+
+  const sendEmergencyEmails = async (message: string, contacts: EmailContact[], userId: string) => {
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+      // Get personal info
+      const { data: personalInfo } = await supabase
+        .from('personal_info')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      // Send to all email contacts
+      await Promise.all(
+        contacts.map(contact =>
+          supabase.functions.invoke('send-emergency-email', {
+            body: {
+              to: contact.email,
+              name: contact.name,
+              subject: '🚨 EMERGENCY ALERT',
+              message: message,
+              location: locationUrl,
+              personalInfo: personalInfo || {},
+            },
+          })
+        )
+      );
+    } catch (error) {
+      console.error('Error sending emergency emails:', error);
+      throw error;
     }
   };
 
@@ -252,16 +340,26 @@ const Index = () => {
               onAdd={() => setShowAddContact(true)}
               onTest={handleTestSOS}
             />
+            <EmailContactList
+              contacts={settings.emailContacts}
+              onRemove={removeEmailContact}
+              onAdd={() => setShowAddEmailContact(true)}
+              onTest={handleTestEmail}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 mt-6">
             <SettingsPanel
               message={settings.message}
               testMessage={settings.testMessage}
+              emailMessage={settings.emailMessage}
+              testEmailMessage={settings.testEmailMessage}
               sensitivity={settings.sensitivity}
               shakeCount={settings.shakeCount}
               onMessageChange={updateMessage}
               onTestMessageChange={updateTestMessage}
+              onEmailMessageChange={updateEmailMessage}
+              onTestEmailMessageChange={updateTestEmailMessage}
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
             />
@@ -294,6 +392,12 @@ const Index = () => {
         open={showAddContact}
         onOpenChange={setShowAddContact}
         onAdd={addContact}
+      />
+
+      <AddEmailContactDialog
+        open={showAddEmailContact}
+        onOpenChange={setShowAddEmailContact}
+        onAdd={addEmailContact}
       />
     </div>
   );
