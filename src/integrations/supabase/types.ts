@@ -110,6 +110,7 @@ export type Database = {
           id: string
           message: string
           shake_sensitivity: string
+          test_message: string
           updated_at: string
           user_id: string
         }
@@ -117,6 +118,7 @@ export type Database = {
           id?: string
           message?: string
           shake_sensitivity?: string
+          test_message?: string
           updated_at?: string
           user_id: string
         }
@@ -124,6 +126,7 @@ export type Database = {
           id?: string
           message?: string
           shake_sensitivity?: string
+          test_message?: string
           updated_at?: string
           user_id?: string
         }

@@ -8,18 +8,22 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface SettingsPanelProps {
   message: string;
+  testMessage: string;
   sensitivity: number;
   shakeCount: number;
   onMessageChange: (message: string) => void;
+  onTestMessageChange: (message: string) => void;
   onSensitivityChange: (sensitivity: number) => void;
   onShakeCountChange: (count: number) => void;
 }
 
 export const SettingsPanel = ({
   message,
+  testMessage,
   sensitivity,
   shakeCount,
   onMessageChange,
+  onTestMessageChange,
   onSensitivityChange,
   onShakeCountChange,
 }: SettingsPanelProps) => {
@@ -49,6 +53,25 @@ export const SettingsPanel = ({
             />
             <p className="text-xs text-muted-foreground">
               Your location will be automatically added to this message
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              <Label htmlFor="testMessage" className="text-base font-semibold">
+                Test Message
+              </Label>
+            </div>
+            <Textarea
+              id="testMessage"
+              value={testMessage}
+              onChange={(e) => onTestMessageChange(e.target.value)}
+              placeholder="Enter your test message..."
+              className="min-h-[100px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              This message will be sent when you test the system with a contact
             </p>
           </div>
 
