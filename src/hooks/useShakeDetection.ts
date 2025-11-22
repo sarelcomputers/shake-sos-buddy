@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { KeepAwake } from '@capacitor-community/keep-awake';
 
 interface ShakeDetectionOptions {
   threshold: number;
@@ -23,8 +24,14 @@ export const useShakeDetection = ({
   useEffect(() => {
     if (!enabled) {
       setShakeCount(0);
+      // Allow device to sleep when disabled
+      KeepAwake.allowSleep().catch(console.error);
       return;
     }
+
+    // Keep device awake and sensors active when armed
+    KeepAwake.keepAwake().catch(console.error);
+    console.log('Device kept awake - shake detection active even when screen locks');
 
     let lastX = 0, lastY = 0, lastZ = 0;
     let lastUpdate = 0;
@@ -88,6 +95,8 @@ export const useShakeDetection = ({
       if (resetTimeout.current) {
         clearTimeout(resetTimeout.current);
       }
+      // Allow device to sleep when hook unmounts
+      KeepAwake.allowSleep().catch(console.error);
     };
   }, [threshold, requiredShakes, resetTime, onShake, enabled]);
 
