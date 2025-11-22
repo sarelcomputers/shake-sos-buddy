@@ -78,6 +78,63 @@ export type Database = {
           },
         ]
       }
+      location_tracking: {
+        Row: {
+          accuracy: number | null
+          altitude: number | null
+          created_at: string
+          heading: number | null
+          id: string
+          latitude: number
+          longitude: number
+          sos_history_id: string
+          speed: number | null
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          altitude?: number | null
+          created_at?: string
+          heading?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          sos_history_id: string
+          speed?: number | null
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          altitude?: number | null
+          created_at?: string
+          heading?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          sos_history_id?: string
+          speed?: number | null
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_tracking_sos_history_id_fkey"
+            columns: ["sos_history_id"]
+            isOneToOne: false
+            referencedRelation: "sos_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_tracking_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_info: {
         Row: {
           age: number | null

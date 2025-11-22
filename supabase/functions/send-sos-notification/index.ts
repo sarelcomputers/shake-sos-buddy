@@ -17,6 +17,7 @@ interface SOSNotificationRequest {
   wifiInfo: { ssid: string; connected: boolean } | null;
   contactsCount: number;
   personalInfo?: any;
+  liveTrackingUrl?: string | null;
 }
 
 serve(async (req) => {
@@ -209,6 +210,12 @@ serve(async (req) => {
                 <div style="text-align: center; margin-top: 15px;">
                   <a href="${locationUrl}" class="location-btn">View Location on Map</a>
                 </div>
+                ${data.liveTrackingUrl ? `
+                <div style="text-align: center; margin-top: 15px; padding: 15px; background: #fef2f2; border-radius: 6px;">
+                  <p style="margin: 0 0 10px 0; color: #dc2626; font-weight: bold;">🔴 LIVE TRACKING ACTIVE (5 minutes)</p>
+                  <a href="${data.liveTrackingUrl}" class="location-btn" style="background-color: #991b1b;">View Live Tracking</a>
+                </div>
+                ` : ''}
               </div>
             </div>
             <div class="footer">
