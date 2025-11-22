@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Power, Settings as SettingsIcon, Users } from 'lucide-react';
+import { Power, Settings as SettingsIcon, Users, UserCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SOSStatus } from '@/components/SOSStatus';
 import { ContactList } from '@/components/ContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
+import { ProfileSettings } from '@/components/ProfileSettings';
 import { AddContactDialog } from '@/components/AddContactDialog';
 import { useSOSSettings } from '@/hooks/useSOSSettings';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
@@ -143,7 +144,7 @@ const Index = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="contacts" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="contacts" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Contacts
@@ -151,6 +152,10 @@ const Index = () => {
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <SettingsIcon className="w-4 h-4" />
               Settings
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <UserCircle className="w-4 h-4" />
+              Profile
             </TabsTrigger>
           </TabsList>
 
@@ -171,6 +176,10 @@ const Index = () => {
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
             />
+          </TabsContent>
+
+          <TabsContent value="profile" className="space-y-4 mt-6">
+            <ProfileSettings />
           </TabsContent>
         </Tabs>
       </div>
