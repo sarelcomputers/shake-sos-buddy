@@ -1,6 +1,6 @@
 import { Geolocation } from '@capacitor/geolocation';
 import { Haptics, NotificationType } from '@capacitor/haptics';
-import { Capacitor } from '@capacitor/core';
+import { SmsManager } from '@byteowls/capacitor-sms';
 import { supabase } from '@/integrations/supabase/client';
 
 export const sendSOSMessages = async (
@@ -22,20 +22,20 @@ export const sendSOSMessages = async (
     const locationUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
     const fullMessage = `${message}\n\nLocation: ${locationUrl}`;
 
-    // Send SMS using device's native SMS app
-    if (Capacitor.isNativePlatform()) {
-      // On native platforms, open SMS app for each contact
-      for (const contact of contacts) {
-        const separator = Capacitor.getPlatform() === 'ios' ? '&' : '?';
-        const smsUrl = `sms:${contact.phone}${separator}body=${encodeURIComponent(fullMessage)}`;
-        window.open(smsUrl, '_system');
-        console.log(`SMS app opened for ${contact.name} (${contact.phone})`);
-        // Small delay between opening SMS apps
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    } else {
-      console.warn('SMS sending only works on native mobile devices');
-      throw new Error('SMS sending only available on mobile devices');
+    // Send SMS silently using device's native SMS capabilities
+    try {
+      const phoneNumbers = contacts.map(c => c.phone);
+      
+      await SmsManager.send({
+        numbers: phoneNumbers,
+        text: fullMessage,
+      });
+      
+      console.log(`SMS sent silently to ${contacts.length} contacts`);
+    } catch (error) {
+      console.error('Failed to send SMS silently:', error);
+      await Haptics.notification({ type: NotificationType.Error });
+      throw error;
     }
 
     // Log to history if user is authenticated
