@@ -14,7 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      emergency_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          phone: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_contacts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sos_history: {
+        Row: {
+          contacts_count: number
+          id: string
+          latitude: number
+          longitude: number
+          message: string
+          triggered_at: string
+          user_id: string
+        }
+        Insert: {
+          contacts_count: number
+          id?: string
+          latitude: number
+          longitude: number
+          message: string
+          triggered_at?: string
+          user_id: string
+        }
+        Update: {
+          contacts_count?: number
+          id?: string
+          latitude?: number
+          longitude?: number
+          message?: string
+          triggered_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sos_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sos_settings: {
+        Row: {
+          id: string
+          message: string
+          shake_sensitivity: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message?: string
+          shake_sensitivity?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message?: string
+          shake_sensitivity?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sos_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
