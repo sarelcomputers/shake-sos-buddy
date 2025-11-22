@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Phone, UserPlus } from 'lucide-react';
+import { Trash2, Phone, UserPlus, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { Contact } from '@/hooks/useSOSSettings';
@@ -8,9 +8,10 @@ interface ContactListProps {
   contacts: Contact[];
   onRemove: (id: string) => void;
   onAdd: () => void;
+  onTest: (contact: Contact) => void;
 }
 
-export const ContactList = ({ contacts, onRemove, onAdd }: ContactListProps) => {
+export const ContactList = ({ contacts, onRemove, onAdd, onTest }: ContactListProps) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -57,14 +58,25 @@ export const ContactList = ({ contacts, onRemove, onAdd }: ContactListProps) => 
                         <p className="text-sm text-muted-foreground">{contact.phone}</p>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onRemove(contact.id)}
-                      className="hover:bg-destructive/20 hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onTest(contact)}
+                        className="hover:bg-primary/10"
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Test
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onRemove(contact.id)}
+                        className="hover:bg-destructive/20 hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               </motion.div>

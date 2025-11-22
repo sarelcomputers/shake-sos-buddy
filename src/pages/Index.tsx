@@ -8,7 +8,7 @@ import { ContactList } from '@/components/ContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { AddContactDialog } from '@/components/AddContactDialog';
-import { useSOSSettings } from '@/hooks/useSOSSettings';
+import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSOSMessages } from '@/utils/sms';
@@ -68,6 +68,23 @@ const Index = () => {
       toast({
         title: "Failed to send SOS",
         description: "Please check your permissions and try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTestSOS = async (contact: Contact) => {
+    try {
+      const testMessage = `[TEST MESSAGE] ${settings.message}\n\nThis is a test of your emergency alert system. No action needed.`;
+      await sendSOSMessages(testMessage, [contact], user?.id);
+      toast({
+        title: "Test Message Sent!",
+        description: `Test SOS sent to ${contact.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Could not send test message. Please try again.",
         variant: "destructive",
       });
     }
@@ -164,6 +181,7 @@ const Index = () => {
               contacts={settings.contacts}
               onRemove={removeContact}
               onAdd={() => setShowAddContact(true)}
+              onTest={handleTestSOS}
             />
           </TabsContent>
 
