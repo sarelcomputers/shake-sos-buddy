@@ -2,7 +2,11 @@ import { Geolocation } from '@capacitor/geolocation';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import { supabase } from '@/integrations/supabase/client';
 
-export const sendSOSMessages = async (message: string, contacts: Array<{ phone: string; name: string }>) => {
+export const sendSOSMessages = async (
+  message: string, 
+  contacts: Array<{ phone: string; name: string }>,
+  userId?: string
+) => {
   try {
     // Get current location
     const position = await Geolocation.getCurrentPosition({
@@ -27,6 +31,22 @@ export const sendSOSMessages = async (message: string, contacts: Array<{ phone: 
       console.error('Failed to send SOS via backend:', error);
       await Haptics.notification({ type: NotificationType.Error });
       throw error;
+    }
+
+    // Log to history if user is authenticated
+    if (userId) {
+      try {
+        await supabase.from('sos_history').insert({
+          user_id: userId,
+          message,
+          latitude,
+          longitude,
+          contacts_count: contacts.length
+        });
+      } catch (historyError) {
+        console.error('Failed to log SOS history:', historyError);
+        // Don't fail the whole operation if logging fails
+      }
     }
 
     console.log('SOS messages sent successfully:', data);
