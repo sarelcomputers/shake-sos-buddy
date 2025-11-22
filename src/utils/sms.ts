@@ -76,6 +76,32 @@ export const sendSOSMessages = async (
           ip_address: null, // IP address not directly available from Capacitor
           wifi_info: wifiInfo
         });
+
+        // Send notification email to control room
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-sos-notification', {
+            body: {
+              userId,
+              message,
+              latitude,
+              longitude,
+              deviceModel: deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : null,
+              deviceSerial: deviceInfo?.identifier || null,
+              networkIsp: networkInfo?.connectionType || null,
+              wifiInfo,
+              contactsCount: contacts.length,
+            }
+          });
+
+          if (emailError) {
+            console.error('Failed to send email notification:', emailError);
+          } else {
+            console.log('Email notification sent to control room');
+          }
+        } catch (emailError) {
+          console.error('Error sending email notification:', emailError);
+          // Don't fail the SOS if email fails
+        }
       } catch (historyError) {
         console.error('Failed to log SOS history:', historyError);
         // Don't fail the whole operation if logging fails
