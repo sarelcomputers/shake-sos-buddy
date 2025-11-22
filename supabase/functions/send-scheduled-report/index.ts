@@ -228,55 +228,67 @@ serve(async (req) => {
       </html>
     `;
 
-    // Send email via Gmail SMTP using a simple HTTP approach
+    // Send email via Gmail SMTP
     const emailSubject = `${reportType === 'daily' ? 'Daily' : 'Weekly'} SOS Alert Report - ${reportPeriod} (${alertCount} alerts)`;
     
-    console.log('Sending email to appcontrolroom@alfa22.co.za');
+    console.log('Sending email to appcontrolroom@alfa22.co.za via Gmail SMTP');
 
-    // Using a simple nodemailer-compatible approach via fetch
-    // Note: In production, you might want to use a dedicated email service
-    const emailPayload = {
-      from: Deno.env.get('GMAIL_USER'),
-      to: 'appcontrolroom@alfa22.co.za',
-      subject: emailSubject,
-      html: htmlBody,
-      attachments: alertCount > 0 ? [
-        {
-          filename: `sos_alerts_${reportType}_${now.toISOString().split('T')[0]}.csv`,
-          content: csvBase64,
-          encoding: 'base64',
-          contentType: 'text/csv'
-        }
-      ] : []
-    };
-
-    // Log the report generation
-    console.log('Report generated successfully:', {
-      reportType,
-      period: reportPeriod,
-      alertCount,
-      uniqueUsers,
-      totalContacts
-    });
-
-    // In a real implementation, you'd send this via SMTP
-    // For now, we'll use a simple approach with the Gmail API or SMTP service
-    // This is a placeholder - in production, integrate with an email service like Resend or SendGrid
+    const boundary = '----=_Part_' + Date.now();
+    const toEmail = 'appcontrolroom@alfa22.co.za';
+    const fromEmail = Deno.env.get('GMAIL_USER') || '';
     
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Report generated and email prepared',
-        stats: {
-          reportType,
-          period: reportPeriod,
-          alertCount,
-          uniqueUsers,
-          totalContacts
-        }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // Construct multipart email with attachment
+    let emailBody = `From: ${fromEmail}\r\n`;
+    emailBody += `To: ${toEmail}\r\n`;
+    emailBody += `Subject: ${emailSubject}\r\n`;
+    emailBody += `MIME-Version: 1.0\r\n`;
+    emailBody += `Content-Type: multipart/mixed; boundary="${boundary}"\r\n\r\n`;
+    
+    // HTML part
+    emailBody += `--${boundary}\r\n`;
+    emailBody += `Content-Type: text/html; charset=UTF-8\r\n`;
+    emailBody += `Content-Transfer-Encoding: quoted-printable\r\n\r\n`;
+    emailBody += htmlBody.replace(/\n/g, '\r\n') + '\r\n\r\n';
+    
+    // CSV attachment (only if there are alerts)
+    if (alertCount > 0) {
+      emailBody += `--${boundary}\r\n`;
+      emailBody += `Content-Type: text/csv; name="sos_alerts_${reportType}_${now.toISOString().split('T')[0]}.csv"\r\n`;
+      emailBody += `Content-Transfer-Encoding: base64\r\n`;
+      emailBody += `Content-Disposition: attachment; filename="sos_alerts_${reportType}_${now.toISOString().split('T')[0]}.csv"\r\n\r\n`;
+      emailBody += csvBase64 + '\r\n\r\n';
+    }
+    
+    emailBody += `--${boundary}--\r\n`;
+
+    try {
+      await sendViaGmailSMTP({
+        to: toEmail,
+        from: fromEmail,
+        subject: emailSubject,
+        body: emailBody
+      });
+
+      console.log('Report email sent successfully via Gmail SMTP');
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Report generated and sent via Gmail',
+          stats: {
+            reportType,
+            period: reportPeriod,
+            alertCount,
+            uniqueUsers,
+            totalContacts
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (emailError) {
+      console.error('Failed to send email via Gmail SMTP:', emailError);
+      throw new Error('Failed to send report email');
+    }
   } catch (error) {
     console.error('Error generating scheduled report:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -286,3 +298,92 @@ serve(async (req) => {
     );
   }
 });
+
+// Gmail SMTP fallback function
+async function sendViaGmailSMTP(emailData: any) {
+  const gmailUser = Deno.env.get('GMAIL_USER');
+  const gmailPassword = Deno.env.get('GMAIL_APP_PASSWORD');
+
+  if (!gmailUser || !gmailPassword) {
+    throw new Error('Gmail credentials not configured');
+  }
+
+  console.log('Connecting to Gmail SMTP server...');
+
+  const conn = await Deno.connect({
+    hostname: 'smtp.gmail.com',
+    port: 587,
+  });
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  async function readResponse(): Promise<string> {
+    const buffer = new Uint8Array(1024);
+    const n = await conn.read(buffer);
+    if (n === null) throw new Error('Connection closed');
+    return decoder.decode(buffer.subarray(0, n));
+  }
+
+  async function sendCommand(command: string) {
+    await conn.write(encoder.encode(command + '\r\n'));
+    return await readResponse();
+  }
+
+  try {
+    // Initial connection
+    await readResponse();
+
+    // EHLO
+    await sendCommand('EHLO localhost');
+
+    // STARTTLS
+    await sendCommand('STARTTLS');
+
+    // Upgrade to TLS
+    const tlsConn = await Deno.startTls(conn, { hostname: 'smtp.gmail.com' });
+
+    async function tlsReadResponse(): Promise<string> {
+      const buffer = new Uint8Array(1024);
+      const n = await tlsConn.read(buffer);
+      if (n === null) throw new Error('Connection closed');
+      return decoder.decode(buffer.subarray(0, n));
+    }
+
+    async function tlsSendCommand(command: string) {
+      await tlsConn.write(encoder.encode(command + '\r\n'));
+      return await tlsReadResponse();
+    }
+
+    // EHLO again after TLS
+    await tlsSendCommand('EHLO localhost');
+
+    // AUTH LOGIN
+    await tlsSendCommand('AUTH LOGIN');
+    await tlsSendCommand(btoa(gmailUser));
+    await tlsSendCommand(btoa(gmailPassword));
+
+    // MAIL FROM
+    await tlsSendCommand(`MAIL FROM:<${emailData.from}>`);
+
+    // RCPT TO
+    await tlsSendCommand(`RCPT TO:<${emailData.to}>`);
+
+    // DATA
+    await tlsSendCommand('DATA');
+
+    // Send email body
+    await tlsConn.write(encoder.encode(emailData.body + '\r\n.\r\n'));
+    await tlsReadResponse();
+
+    // QUIT
+    await tlsSendCommand('QUIT');
+
+    tlsConn.close();
+    console.log('Email sent successfully via Gmail SMTP');
+  } catch (error) {
+    conn.close();
+    console.error('Gmail SMTP error:', error);
+    throw error;
+  }
+}
