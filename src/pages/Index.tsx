@@ -26,6 +26,24 @@ const Index = () => {
 
   const [showAddContact, setShowAddContact] = useState(false);
 
+  const handleToggle = () => {
+    const willBeEnabled = !settings.enabled;
+    toggleEnabled();
+    
+    if (willBeEnabled) {
+      toast({
+        title: "System Armed ✓",
+        description: "Device will stay awake and monitor for shakes even when screen is locked",
+        duration: 5000,
+      });
+    } else {
+      toast({
+        title: "System Disarmed",
+        description: "Shake detection disabled",
+      });
+    }
+  };
+
   const handleSOS = async () => {
     try {
       if (settings.contacts.length === 0) {
@@ -93,7 +111,7 @@ const Index = () => {
           className="flex justify-center"
         >
           <Button
-            onClick={toggleEnabled}
+            onClick={handleToggle}
             size="lg"
             className={`w-32 h-32 rounded-full text-xl font-bold transition-all ${
               settings.enabled
