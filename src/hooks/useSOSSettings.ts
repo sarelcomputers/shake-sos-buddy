@@ -12,6 +12,7 @@ export interface Contact {
 export interface SOSSettings {
   enabled: boolean;
   message: string;
+  testMessage: string;
   sensitivity: number;
   shakeCount: number;
   contacts: Contact[];
@@ -20,6 +21,7 @@ export interface SOSSettings {
 const DEFAULT_SETTINGS: SOSSettings = {
   enabled: false,
   message: 'EMERGENCY! I need help at this location:',
+  testMessage: '[TEST] This is a test of your emergency alert system. No action needed.',
   sensitivity: 15,
   shakeCount: 3,
   contacts: [],
@@ -55,6 +57,7 @@ export const useSOSSettings = () => {
         setSettings(prev => ({
           ...prev,
           message: data.message,
+          testMessage: data.test_message || DEFAULT_SETTINGS.testMessage,
           sensitivity: parseInt(data.shake_sensitivity) || 15,
           shakeCount: 3,
         }));
@@ -97,6 +100,7 @@ export const useSOSSettings = () => {
         .from('sos_settings')
         .update({
           message: updated.message,
+          test_message: updated.testMessage,
           shake_sensitivity: updated.sensitivity.toString(),
         })
         .eq('user_id', user.id);
@@ -114,6 +118,10 @@ export const useSOSSettings = () => {
 
   const updateMessage = (message: string) => {
     saveSettings({ message });
+  };
+
+  const updateTestMessage = (testMessage: string) => {
+    saveSettings({ testMessage });
   };
 
   const updateSensitivity = (sensitivity: number) => {
@@ -180,6 +188,7 @@ export const useSOSSettings = () => {
     loading,
     toggleEnabled,
     updateMessage,
+    updateTestMessage,
     updateSensitivity,
     updateShakeCount,
     addContact,

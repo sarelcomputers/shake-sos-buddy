@@ -22,6 +22,7 @@ const Index = () => {
     loading,
     toggleEnabled,
     updateMessage,
+    updateTestMessage,
     updateSensitivity,
     updateShakeCount,
     addContact,
@@ -75,8 +76,7 @@ const Index = () => {
 
   const handleTestSOS = async (contact: Contact) => {
     try {
-      const testMessage = `[TEST MESSAGE] ${settings.message}\n\nThis is a test of your emergency alert system. No action needed.`;
-      await sendSOSMessages(testMessage, [contact], user?.id);
+      await sendSOSMessages(settings.testMessage, [contact], user?.id);
       toast({
         title: "Test Message Sent!",
         description: `Test SOS sent to ${contact.name}`,
@@ -188,9 +188,11 @@ const Index = () => {
           <TabsContent value="settings" className="space-y-4 mt-6">
             <SettingsPanel
               message={settings.message}
+              testMessage={settings.testMessage}
               sensitivity={settings.sensitivity}
               shakeCount={settings.shakeCount}
               onMessageChange={updateMessage}
+              onTestMessageChange={updateTestMessage}
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
             />
