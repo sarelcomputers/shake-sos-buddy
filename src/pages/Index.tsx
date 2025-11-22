@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Power, Settings as SettingsIcon, Users, UserCircle, History } from 'lucide-react';
+import { Power, Settings as SettingsIcon, Users, UserCircle, History, Shield, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +15,7 @@ import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { sendSOSMessages } from '@/utils/sms';
 import { toast } from '@/hooks/use-toast';
 import alfa22Logo from '@/assets/alfa22-logo.png';
@@ -23,6 +24,7 @@ const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { hasAccess, loading: subscriptionLoading } = useSubscription();
+  const { isAdmin, loading: adminLoading } = useAdminCheck();
   const {
     settings,
     loading,
@@ -252,6 +254,27 @@ const Index = () => {
 
           <TabsContent value="profile" className="space-y-4 mt-6">
             <ProfileSettings />
+            
+            {!adminLoading && isAdmin && (
+              <div className="space-y-2 pt-4">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate('/admin')}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Admin Dashboard
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                  onClick={() => navigate('/control-room')}
+                >
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Control Room
+                </Button>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
