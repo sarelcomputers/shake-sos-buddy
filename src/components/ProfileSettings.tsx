@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Save, Shield, Moon, Sun, CreditCard } from 'lucide-react';
+import { User, Mail, Lock, Save, Shield, Moon, Sun, CreditCard, Crown } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -16,6 +17,7 @@ export const ProfileSettings = () => {
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const { isAdmin } = useAdminCheck();
   const [email, setEmail] = useState(user?.email || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -234,6 +236,24 @@ export const ProfileSettings = () => {
               )}
             </Button>
           </form>
+
+          {/* Admin Dashboard */}
+          {isAdmin && (
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <Crown className="w-5 h-5 text-primary" />
+                <Label className="text-base font-semibold">Admin</Label>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => navigate('/admin')}
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Admin Dashboard
+              </Button>
+            </div>
+          )}
 
           {/* Subscription Management */}
           <div className="space-y-3 pt-4 border-t">
