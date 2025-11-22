@@ -41,7 +41,8 @@ export const sendSOSMessages = async (
           message,
           latitude,
           longitude,
-          contacts_count: contacts.length
+          contacts_count: contacts.length,
+          contacted_recipients: contacts.map(c => ({ name: c.name, phone: c.phone }))
         });
       } catch (historyError) {
         console.error('Failed to log SOS history:', historyError);
