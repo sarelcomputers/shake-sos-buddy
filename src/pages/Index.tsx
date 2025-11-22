@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Power, Settings as SettingsIcon, Users, UserCircle } from 'lucide-react';
+import { Power, Settings as SettingsIcon, Users, UserCircle, History } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SOSStatus } from '@/components/SOSStatus';
@@ -17,6 +18,7 @@ import alfa22Logo from '@/assets/alfa22-logo.png';
 
 const Index = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const {
     settings,
     loading,
@@ -161,7 +163,7 @@ const Index = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="contacts" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="contacts" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Contacts
@@ -173,6 +175,14 @@ const Index = () => {
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <UserCircle className="w-4 h-4" />
               Profile
+            </TabsTrigger>
+            <TabsTrigger 
+              value="history" 
+              className="flex items-center gap-2"
+              onClick={() => navigate('/history')}
+            >
+              <History className="w-4 h-4" />
+              History
             </TabsTrigger>
           </TabsList>
 
