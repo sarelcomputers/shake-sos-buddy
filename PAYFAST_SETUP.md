@@ -44,6 +44,16 @@ For production, change the URL to `https://www.payfast.co.za/eng/process`
 3. Add the webhook URL: `https://cglsnlsasnveypwmguee.supabase.co/functions/v1/payfast-webhook`
 4. Enable Instant Transaction Notifications (ITN)
 
+**Important Security Note:**
+The webhook validates incoming requests to ensure they come from PayFast's verified IP addresses:
+- 197.97.145.144/28 (197.97.145.144 - 197.97.145.159)
+- 41.74.179.192/27 (41.74.179.192 – 41.74.179.223)
+- 102.216.36.0/28 (102.216.36.0 - 102.216.36.15)
+- 102.216.36.128/28 (102.216.36.128 - 102.216.36.143)
+- 144.126.193.139
+
+Requests from other IPs will be rejected for security. In testing/sandbox mode, all IPs are allowed.
+
 ## 5. Test the Integration
 
 1. Sign up for a new account in your app
@@ -74,5 +84,7 @@ For production, change the URL to `https://www.payfast.co.za/eng/process`
 - `cancelled`: User cancelled subscription
 
 ## Support
+
+**PayFast Ports:** The webhook accepts requests on ports 80, 8080, 8081, and 443.
 
 For PayFast support, visit: https://www.payfast.co.za/support
