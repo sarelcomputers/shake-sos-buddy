@@ -10,9 +10,11 @@ import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { AddContactDialog } from '@/components/AddContactDialog';
 import { PermissionsSetup } from '@/components/PermissionsSetup';
+import { SubscriptionGate } from '@/components/SubscriptionGate';
 import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
 import { useShakeDetection } from '@/hooks/useShakeDetection';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { sendSOSMessages } from '@/utils/sms';
 import { toast } from '@/hooks/use-toast';
 import alfa22Logo from '@/assets/alfa22-logo.png';
@@ -20,6 +22,7 @@ import alfa22Logo from '@/assets/alfa22-logo.png';
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { hasAccess, loading: subscriptionLoading } = useSubscription();
   const {
     settings,
     loading,
@@ -129,12 +132,17 @@ const Index = () => {
     enabled: settings.enabled,
   });
 
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
+  }
+
+  // Show subscription gate if no access
+  if (!hasAccess) {
+    return <SubscriptionGate />;
   }
 
   // Show permissions setup if not completed
