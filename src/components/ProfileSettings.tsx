@@ -313,6 +313,27 @@ export const ProfileSettings = () => {
               Re-run Permissions Setup
             </Button>
           </div>
+
+          {/* Legal Links */}
+          <div className="space-y-3 pt-4 border-t">
+            <Label className="text-base font-semibold">Legal</Label>
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => navigate('/privacy')}
+              >
+                Privacy Policy
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => navigate('/terms')}
+              >
+                Terms of Service
+              </Button>
+            </div>
+          </div>
         </Card>
       </motion.div>
     </div>
