@@ -143,12 +143,59 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          amount_cents: number
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          payfast_token: string | null
+          status: string
+          trial_ends_at: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          payfast_token?: string | null
+          status?: string
+          trial_ends_at?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          payfast_token?: string | null
+          status?: string
+          trial_ends_at?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_active_subscription: { Args: { user_uuid: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
