@@ -1,6 +1,5 @@
 import { Geolocation } from '@capacitor/geolocation';
 import { Haptics, NotificationType } from '@capacitor/haptics';
-import { SmsManager } from '@byteowls/capacitor-sms';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,18 +82,26 @@ export const sendSOSMessages = async (
     
     const fullMessage = `${message}\n\nLocation: ${locationUrl}${personalInfoText}`;
 
-    // Send SMS silently using device's native SMS capabilities
+    // Send SMS via Twilio edge function
     try {
       const phoneNumbers = contacts.map(c => c.phone);
       
-      await SmsManager.send({
-        numbers: phoneNumbers,
-        text: fullMessage,
+      const { data, error } = await supabase.functions.invoke('send-sms-twilio', {
+        body: {
+          phoneNumbers,
+          message: fullMessage,
+        }
       });
+
+      if (error) {
+        console.error('Failed to send SMS via Twilio:', error);
+        await Haptics.notification({ type: NotificationType.Error });
+        throw error;
+      }
       
-      console.log(`SMS sent silently to ${contacts.length} contacts`);
+      console.log(`SMS sent via Twilio to ${data.sent} contacts`);
     } catch (error) {
-      console.error('Failed to send SMS silently:', error);
+      console.error('Failed to send SMS via Twilio:', error);
       await Haptics.notification({ type: NotificationType.Error });
       throw error;
     }
@@ -235,7 +242,7 @@ export const sendSOSMessages = async (
       }
     }
 
-    console.log('SOS messages sent successfully via device SMS');
+    console.log('SOS messages sent successfully via Twilio');
     
     // Trigger success haptic
     await Haptics.notification({ type: NotificationType.Success });
