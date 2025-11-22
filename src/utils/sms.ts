@@ -4,6 +4,7 @@ import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
 import { supabase } from '@/integrations/supabase/client';
 import { VoiceRecorder, blobToBase64 } from './voiceRecorder';
+import { startLocationTracking, generateTrackingUrl } from './locationTracking';
 
 export const sendSOSMessages = async (
   message: string, 
@@ -189,9 +190,10 @@ export const sendSOSMessages = async (
     });
 
     // Log to history if user is authenticated
+    let sosHistoryId: string | null = null;
     if (userId) {
       try {
-        await supabase.from('sos_history').insert({
+        const { data: historyData, error: historyError } = await supabase.from('sos_history').insert({
           user_id: userId,
           message,
           latitude,
@@ -206,10 +208,53 @@ export const sendSOSMessages = async (
           personal_info: personalInfo || {},
           audio_transcript: null, // Will be updated when recording completes
           audio_duration_seconds: null
-        });
+        }).select('id').single();
+
+        if (historyError) {
+          throw historyError;
+        }
+
+        sosHistoryId = historyData?.id || null;
+
+        // Start 5-minute live location tracking
+        if (sosHistoryId) {
+          console.log('Starting 5-minute live location tracking...');
+          startLocationTracking({
+            sosHistoryId,
+            userId,
+            durationMinutes: 5
+          }).catch(error => {
+            console.error('Failed to start location tracking:', error);
+          });
+
+          // Generate live tracking URL
+          const trackingUrl = generateTrackingUrl(sosHistoryId);
+          console.log('Live tracking URL:', trackingUrl);
+
+          // Update SMS message with tracking link
+          const trackingMessage = `${fullMessage}\n\n🔴 LIVE TRACKING (5 min): ${trackingUrl}`;
+
+          // Resend SMS with tracking link
+          try {
+            const phoneNumbers = contacts.map(c => c.phone);
+            
+            await supabase.functions.invoke('send-sms-twilio', {
+              body: {
+                phoneNumbers,
+                message: trackingMessage,
+              }
+            });
+
+            console.log('Updated SMS with live tracking link sent');
+          } catch (smsError) {
+            console.error('Failed to send updated SMS with tracking:', smsError);
+          }
+        }
 
         // Send notification email to control room (note: transcript will be sent separately when available)
         try {
+          const trackingUrl = sosHistoryId ? generateTrackingUrl(sosHistoryId) : null;
+          
           const { error: emailError } = await supabase.functions.invoke('send-sos-notification', {
             body: {
               userId,
@@ -223,7 +268,8 @@ export const sendSOSMessages = async (
               contactsCount: contacts.length,
               personalInfo: personalInfo || null,
               audioTranscript: null, // Will be available after 2 minutes
-              audioDurationSeconds: null
+              audioDurationSeconds: null,
+              liveTrackingUrl: trackingUrl
             }
           });
 
