@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapView } from '@/components/MapView';
 import { ClusterMapView } from '@/components/ClusterMapView';
+import { AlertAnalytics } from '@/components/AlertAnalytics';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -452,9 +453,10 @@ export default function ControlRoom() {
 
         {/* Alerts View */}
         <Tabs defaultValue="list" className="space-y-4">
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+          <TabsList className="grid w-full max-w-3xl grid-cols-4">
             <TabsTrigger value="list">List View</TabsTrigger>
             <TabsTrigger value="map">Map View</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -597,6 +599,10 @@ export default function ControlRoom() {
                 />
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <AlertAnalytics alerts={filteredAlerts} />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">
