@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Save, User, Heart, Phone, Car, Home, Info } from 'lucide-react';
+import { Save, User, Heart, Phone, Car, Home, Info, Camera, Upload } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -28,12 +29,14 @@ interface PersonalInfo {
   vehicle_color: string;
   vehicle_registration: string;
   home_address: string;
+  photo_url: string;
 }
 
 export const PersonalInformation = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [info, setInfo] = useState<PersonalInfo>({
     name: '',
     surname: '',
@@ -51,6 +54,7 @@ export const PersonalInformation = () => {
     vehicle_color: '',
     vehicle_registration: '',
     home_address: '',
+    photo_url: '',
   });
 
   useEffect(() => {
@@ -87,12 +91,83 @@ export const PersonalInformation = () => {
           vehicle_color: data.vehicle_color || '',
           vehicle_registration: data.vehicle_registration || '',
           home_address: data.home_address || '',
+          photo_url: data.photo_url || '',
         });
       }
     } catch (error) {
       console.error('Error fetching personal info:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Delete old photo if exists
+      if (info.photo_url) {
+        const oldPath = info.photo_url.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('profile-photos')
+            .remove([`${user!.id}/${oldPath}`]);
+        }
+      }
+
+      // Upload new photo
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user!.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-photos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(filePath);
+
+      setInfo({ ...info, photo_url: publicUrl });
+
+      toast({
+        title: "Photo Uploaded",
+        description: "Don't forget to save your information",
+      });
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload photo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -119,6 +194,7 @@ export const PersonalInformation = () => {
           vehicle_color: info.vehicle_color,
           vehicle_registration: info.vehicle_registration,
           home_address: info.home_address,
+          photo_url: info.photo_url,
         }, {
           onConflict: 'user_id'
         });
@@ -166,6 +242,52 @@ export const PersonalInformation = () => {
         transition={{ delay: 0.1 }}
       >
         <Card className="p-6 space-y-6">
+          {/* Profile Photo */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Camera className="w-5 h-5 text-primary" />
+              <h4 className="font-semibold text-base">Profile Photo</h4>
+            </div>
+
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="w-32 h-32">
+                <AvatarImage src={info.photo_url} alt="Profile photo" />
+                <AvatarFallback className="text-2xl">
+                  {info.name?.[0]?.toUpperCase() || info.surname?.[0]?.toUpperCase() || '?'}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex flex-col items-center gap-2">
+                <Label htmlFor="photo-upload" className="cursor-pointer">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 border-2 border-background border-t-transparent rounded-full" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        Upload Photo
+                      </>
+                    )}
+                  </div>
+                </Label>
+                <Input
+                  id="photo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+                <p className="text-xs text-muted-foreground text-center">
+                  Max 5MB • JPG, PNG, WEBP
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Personal Details */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
