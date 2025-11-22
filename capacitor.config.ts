@@ -11,6 +11,9 @@ const config: CapacitorConfig = {
   plugins: {
     KeepAwake: {
       enabled: true
+    },
+    SmsManager: {
+      // No specific configuration needed for basic SMS sending
     }
   }
 };
