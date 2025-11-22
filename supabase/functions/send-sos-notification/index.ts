@@ -16,6 +16,7 @@ interface SOSNotificationRequest {
   networkIsp: string | null;
   wifiInfo: { ssid: string; connected: boolean } | null;
   contactsCount: number;
+  personalInfo?: any;
 }
 
 serve(async (req) => {
@@ -46,6 +47,67 @@ serve(async (req) => {
 
     const locationUrl = `https://maps.google.com/?q=${data.latitude},${data.longitude}`;
     const timestamp = new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' });
+
+    // Build personal info section
+    const personalInfoSection = data.personalInfo ? `
+      <div class="section">
+        <h3>Personal Information</h3>
+        ${data.personalInfo.name ? `
+        <div class="info-row">
+          <span class="label">Name:</span>
+          <span class="value">${data.personalInfo.name} ${data.personalInfo.surname || ''}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.age ? `
+        <div class="info-row">
+          <span class="label">Age:</span>
+          <span class="value">${data.personalInfo.age}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.gender ? `
+        <div class="info-row">
+          <span class="label">Gender:</span>
+          <span class="value">${data.personalInfo.gender}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.blood_type ? `
+        <div class="info-row">
+          <span class="label">Blood Type:</span>
+          <span class="value">${data.personalInfo.blood_type}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.medical_aid_name ? `
+        <div class="info-row">
+          <span class="label">Medical Aid:</span>
+          <span class="value">${data.personalInfo.medical_aid_name}${data.personalInfo.medical_aid_number ? ` (${data.personalInfo.medical_aid_number})` : ''}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.home_address ? `
+        <div class="info-row">
+          <span class="label">Home Address:</span>
+          <span class="value">${data.personalInfo.home_address}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.spouse_name ? `
+        <div class="info-row">
+          <span class="label">Spouse:</span>
+          <span class="value">${data.personalInfo.spouse_name}${data.personalInfo.spouse_contact ? ` - ${data.personalInfo.spouse_contact}` : ''}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.friend_name ? `
+        <div class="info-row">
+          <span class="label">Friend:</span>
+          <span class="value">${data.personalInfo.friend_name} ${data.personalInfo.friend_surname || ''}${data.personalInfo.friend_contact ? ` - ${data.personalInfo.friend_contact}` : ''}</span>
+        </div>
+        ` : ''}
+        ${data.personalInfo.vehicle_registration ? `
+        <div class="info-row">
+          <span class="label">Vehicle:</span>
+          <span class="value">${data.personalInfo.vehicle_brand || ''} ${data.personalInfo.vehicle_color || ''} - ${data.personalInfo.vehicle_registration}</span>
+        </div>
+        ` : ''}
+      </div>
+    ` : '';
 
     // Create HTML email
     const htmlBody = `
@@ -100,6 +162,8 @@ serve(async (req) => {
                   <span class="value">${data.userId}</span>
                 </div>
               </div>
+
+              ${personalInfoSection}
 
               <div class="section">
                 <h3>Device Information</h3>

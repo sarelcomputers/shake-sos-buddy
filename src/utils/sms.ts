@@ -60,6 +60,24 @@ export const sendSOSMessages = async (
       console.error('Failed to capture device info:', deviceError);
     }
 
+    // Fetch personal information
+    let personalInfo = null;
+    if (userId) {
+      try {
+        const { data: personalData } = await supabase
+          .from('personal_info')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        
+        if (personalData) {
+          personalInfo = personalData;
+        }
+      } catch (error) {
+        console.error('Failed to fetch personal info:', error);
+      }
+    }
+
     // Log to history if user is authenticated
     if (userId) {
       try {
@@ -74,7 +92,8 @@ export const sendSOSMessages = async (
           device_serial: deviceInfo?.identifier || null,
           network_isp: networkInfo?.connectionType || null,
           ip_address: null, // IP address not directly available from Capacitor
-          wifi_info: wifiInfo
+          wifi_info: wifiInfo,
+          personal_info: personalInfo || {}
         });
 
         // Send notification email to control room
@@ -90,6 +109,7 @@ export const sendSOSMessages = async (
               networkIsp: networkInfo?.connectionType || null,
               wifiInfo,
               contactsCount: contacts.length,
+              personalInfo: personalInfo || null,
             }
           });
 
