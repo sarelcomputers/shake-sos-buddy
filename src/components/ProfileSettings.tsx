@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Save, Shield, Moon, Sun, CreditCard, Crown } from 'lucide-react';
+import { User, Mail, Lock, Save, Shield, Moon, Sun, CreditCard, Crown, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export const ProfileSettings = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const { isAdmin } = useAdminCheck();
@@ -333,6 +333,22 @@ export const ProfileSettings = () => {
                 Terms of Service
               </Button>
             </div>
+          </div>
+
+          {/* Logout */}
+          <div className="pt-4 border-t">
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={() => {
+                signOut();
+                toast.success('Logged out successfully');
+                navigate('/auth');
+              }}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </Card>
       </motion.div>
