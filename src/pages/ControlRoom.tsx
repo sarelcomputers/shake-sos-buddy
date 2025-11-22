@@ -13,7 +13,7 @@ import { AlertAnalytics } from '@/components/AlertAnalytics';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle, Download, Calendar as CalendarIcon, Send, Mail } from 'lucide-react';
+import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle, Download, Calendar as CalendarIcon, Send, Mail, UserCircle } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,24 @@ interface SOSAlert {
   device_serial: string | null;
   network_isp: string | null;
   wifi_info: { ssid: string; connected: boolean } | null;
+  personal_info?: {
+    name?: string;
+    surname?: string;
+    age?: number;
+    gender?: string;
+    blood_type?: string;
+    medical_aid_name?: string;
+    medical_aid_number?: string;
+    home_address?: string;
+    spouse_name?: string;
+    spouse_contact?: string;
+    friend_name?: string;
+    friend_surname?: string;
+    friend_contact?: string;
+    vehicle_brand?: string;
+    vehicle_color?: string;
+    vehicle_registration?: string;
+  };
   profiles?: {
     email: string;
   };
@@ -80,6 +98,7 @@ export default function ControlRoom() {
           ...item,
           contacted_recipients: item.contacted_recipients as Array<{ name: string; phone: string }>,
           wifi_info: item.wifi_info as { ssid: string; connected: boolean } | null,
+          personal_info: item.personal_info as SOSAlert['personal_info'],
         }));
 
         setAlerts(typedData);
@@ -128,6 +147,7 @@ export default function ControlRoom() {
               ...data,
               contacted_recipients: data.contacted_recipients as Array<{ name: string; phone: string }>,
               wifi_info: data.wifi_info as { ssid: string; connected: boolean } | null,
+              personal_info: data.personal_info as SOSAlert['personal_info'],
             };
             
             setAlerts((prev) => [typedData, ...prev]);
@@ -568,6 +588,30 @@ export default function ControlRoom() {
                             )}
                           </div>
                         )}
+
+                        {alert.personal_info && Object.keys(alert.personal_info).length > 0 && (
+                          <div>
+                            <p className="text-sm font-semibold mb-1 flex items-center gap-2">
+                              <UserCircle className="h-4 w-4" />
+                              Personal Info
+                            </p>
+                            {alert.personal_info.name && (
+                              <p className="text-xs text-muted-foreground">
+                                {alert.personal_info.name} {alert.personal_info.surname || ''}
+                              </p>
+                            )}
+                            {alert.personal_info.blood_type && (
+                              <p className="text-xs text-muted-foreground">
+                                Blood Type: {alert.personal_info.blood_type}
+                              </p>
+                            )}
+                            {alert.personal_info.medical_aid_name && (
+                              <p className="text-xs text-muted-foreground">
+                                Medical Aid: {alert.personal_info.medical_aid_name}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -788,6 +832,54 @@ export default function ControlRoom() {
                       <strong>WiFi:</strong> {selectedAlert.wifi_info.ssid}
                     </div>
                   )}
+
+                  {selectedAlert.personal_info && Object.keys(selectedAlert.personal_info).length > 0 && (
+                    <div className="pt-3 border-t">
+                      <h3 className="font-semibold mb-2 flex items-center gap-2">
+                        <UserCircle className="h-4 w-4" />
+                        Personal Information
+                      </h3>
+                      {selectedAlert.personal_info.name && (
+                        <div><strong>Name:</strong> {selectedAlert.personal_info.name} {selectedAlert.personal_info.surname || ''}</div>
+                      )}
+                      {selectedAlert.personal_info.age && (
+                        <div><strong>Age:</strong> {selectedAlert.personal_info.age}</div>
+                      )}
+                      {selectedAlert.personal_info.gender && (
+                        <div><strong>Gender:</strong> {selectedAlert.personal_info.gender}</div>
+                      )}
+                      {selectedAlert.personal_info.blood_type && (
+                        <div><strong>Blood Type:</strong> {selectedAlert.personal_info.blood_type}</div>
+                      )}
+                      {selectedAlert.personal_info.medical_aid_name && (
+                        <div>
+                          <strong>Medical Aid:</strong> {selectedAlert.personal_info.medical_aid_name}
+                          {selectedAlert.personal_info.medical_aid_number && ` (${selectedAlert.personal_info.medical_aid_number})`}
+                        </div>
+                      )}
+                      {selectedAlert.personal_info.home_address && (
+                        <div><strong>Home Address:</strong> {selectedAlert.personal_info.home_address}</div>
+                      )}
+                      {selectedAlert.personal_info.spouse_name && (
+                        <div>
+                          <strong>Spouse:</strong> {selectedAlert.personal_info.spouse_name}
+                          {selectedAlert.personal_info.spouse_contact && ` - ${selectedAlert.personal_info.spouse_contact}`}
+                        </div>
+                      )}
+                      {selectedAlert.personal_info.friend_name && (
+                        <div>
+                          <strong>Friend:</strong> {selectedAlert.personal_info.friend_name} {selectedAlert.personal_info.friend_surname || ''}
+                          {selectedAlert.personal_info.friend_contact && ` - ${selectedAlert.personal_info.friend_contact}`}
+                        </div>
+                      )}
+                      {selectedAlert.personal_info.vehicle_registration && (
+                        <div>
+                          <strong>Vehicle:</strong> {selectedAlert.personal_info.vehicle_brand || ''} {selectedAlert.personal_info.vehicle_color || ''} - {selectedAlert.personal_info.vehicle_registration}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div>
                     <strong>Contacts Notified ({selectedAlert.contacts_count}):</strong>
                     <ul className="list-disc list-inside pl-4 mt-1">

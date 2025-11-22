@@ -148,6 +148,7 @@ export type Database = {
           longitude: number
           message: string
           network_isp: string | null
+          personal_info: Json | null
           triggered_at: string
           user_id: string
           wifi_info: Json | null
@@ -163,6 +164,7 @@ export type Database = {
           longitude: number
           message: string
           network_isp?: string | null
+          personal_info?: Json | null
           triggered_at?: string
           user_id: string
           wifi_info?: Json | null
@@ -178,6 +180,7 @@ export type Database = {
           longitude?: number
           message?: string
           network_isp?: string | null
+          personal_info?: Json | null
           triggered_at?: string
           user_id?: string
           wifi_info?: Json | null
