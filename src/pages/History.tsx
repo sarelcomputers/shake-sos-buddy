@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, MapPin, Users, ArrowLeft } from 'lucide-react';
+import { Clock, MapPin, Users, ArrowLeft, Map, List } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MapView } from '@/components/MapView';
+import { ClusterMapView } from '@/components/ClusterMapView';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -112,77 +114,126 @@ const History = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* History List */}
-            <div className="space-y-4">
-              {history.map((entry) => (
-                <Card
-                  key={entry.id}
-                  className={`cursor-pointer transition-all hover:shadow-lg ${
-                    selectedEntry?.id === entry.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => setSelectedEntry(entry)}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-primary" />
-                      {formatDate(entry.triggered_at)}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {entry.message}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="w-4 h-4" />
-                        <span>
-                          {entry.latitude.toFixed(4)}, {entry.longitude.toFixed(4)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Users className="w-4 h-4" />
-                        <span>{entry.contacts_count} contacts</span>
-                      </div>
-                    </div>
-                    {entry.contacted_recipients && entry.contacted_recipients.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {entry.contacted_recipients.map((recipient, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {recipient.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          <Tabs defaultValue="list" className="w-full">
+            <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+              <TabsTrigger value="list" className="flex items-center gap-2">
+                <List className="w-4 h-4" />
+                List View
+              </TabsTrigger>
+              <TabsTrigger value="cluster" className="flex items-center gap-2">
+                <Map className="w-4 h-4" />
+                Cluster Map
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Map */}
-            <div className="sticky top-4 h-[600px]">
-              <Card className="h-full overflow-hidden">
+            <TabsContent value="list" className="mt-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* History List */}
+                <div className="space-y-4">
+                  {history.map((entry) => (
+                    <Card
+                      key={entry.id}
+                      className={`cursor-pointer transition-all hover:shadow-lg ${
+                        selectedEntry?.id === entry.id ? 'ring-2 ring-primary' : ''
+                      }`}
+                      onClick={() => setSelectedEntry(entry)}
+                    >
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Clock className="w-5 h-5 text-primary" />
+                          {formatDate(entry.triggered_at)}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {entry.message}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <MapPin className="w-4 h-4" />
+                            <span>
+                              {entry.latitude.toFixed(4)}, {entry.longitude.toFixed(4)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Users className="w-4 h-4" />
+                            <span>{entry.contacts_count} contacts</span>
+                          </div>
+                        </div>
+                        {entry.contacted_recipients && entry.contacted_recipients.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {entry.contacted_recipients.map((recipient, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {recipient.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Individual Map */}
+                <div className="sticky top-4 h-[600px]">
+                  <Card className="h-full overflow-hidden">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Alert Location</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 h-[calc(100%-4rem)]">
+                      {selectedEntry ? (
+                        <MapView
+                          key={selectedEntry.id}
+                          latitude={selectedEntry.latitude}
+                          longitude={selectedEntry.longitude}
+                          message={selectedEntry.message}
+                          timestamp={formatDate(selectedEntry.triggered_at)}
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          Select an alert to view its location
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="cluster" className="mt-6">
+              <Card className="h-[700px] overflow-hidden">
                 <CardHeader>
-                  <CardTitle className="text-lg">Alert Location</CardTitle>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>All Alert Locations</span>
+                    <Badge variant="secondary">
+                      {history.length} location{history.length !== 1 ? 's' : ''}
+                    </Badge>
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Markers are clustered for better visualization. Click clusters to zoom in.
+                  </p>
                 </CardHeader>
-                <CardContent className="p-0 h-[calc(100%-4rem)]">
-                  {selectedEntry ? (
-                    <MapView
-                      key={selectedEntry.id}
-                      latitude={selectedEntry.latitude}
-                      longitude={selectedEntry.longitude}
-                      message={selectedEntry.message}
-                      timestamp={formatDate(selectedEntry.triggered_at)}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      Select an alert to view its location
-                    </div>
-                  )}
+                <CardContent className="p-0 h-[calc(100%-8rem)]">
+                  <ClusterMapView
+                    locations={history.map(entry => ({
+                      id: entry.id,
+                      latitude: entry.latitude,
+                      longitude: entry.longitude,
+                      message: entry.message,
+                      timestamp: formatDate(entry.triggered_at),
+                      contacts_count: entry.contacts_count,
+                    }))}
+                    onMarkerClick={(id) => {
+                      const entry = history.find(e => e.id === id);
+                      if (entry) {
+                        setSelectedEntry(entry);
+                      }
+                    }}
+                  />
                 </CardContent>
               </Card>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </div>
