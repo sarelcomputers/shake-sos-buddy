@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.payfast-webhook]
 verify_jwt = false
+
+[functions.send-emergency-email]
+verify_jwt = false
