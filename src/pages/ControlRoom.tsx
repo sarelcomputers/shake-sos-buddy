@@ -12,7 +12,7 @@ import { ClusterMapView } from '@/components/ClusterMapView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, Search, Filter, MapPin, Phone, Clock, Smartphone, Wifi, AlertCircle, Download, Calendar as CalendarIcon, Send, Mail } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,7 @@ export default function ControlRoom() {
   const [selectedAlert, setSelectedAlert] = useState<SOSAlert | null>(null);
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [sendingReport, setSendingReport] = useState(false);
 
   // Check admin access
   useEffect(() => {
@@ -276,6 +277,28 @@ export default function ControlRoom() {
     toast.success(`Exported ${filteredAlerts.length} alerts to Excel`);
   };
 
+  const sendManualReport = async (reportType: 'daily' | 'weekly') => {
+    setSendingReport(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-scheduled-report', {
+        body: { reportType }
+      });
+
+      if (error) throw error;
+
+      toast.success(`${reportType === 'daily' ? 'Daily' : 'Weekly'} report sent successfully!`, {
+        description: 'Email sent to appcontrolroom@alfa22.co.za'
+      });
+    } catch (error) {
+      console.error('Error sending manual report:', error);
+      toast.error('Failed to send report', {
+        description: 'Please try again or check the logs'
+      });
+    } finally {
+      setSendingReport(false);
+    }
+  };
+
   if (adminLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -429,9 +452,10 @@ export default function ControlRoom() {
 
         {/* Alerts View */}
         <Tabs defaultValue="list" className="space-y-4">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="list">List View</TabsTrigger>
             <TabsTrigger value="map">Map View</TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
           <TabsContent value="list" className="space-y-4">
@@ -573,6 +597,128 @@ export default function ControlRoom() {
                 />
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-4">
+            <Card className="p-6">
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Scheduled Reports</h2>
+                  <p className="text-muted-foreground">
+                    Automated email reports are sent to appcontrolroom@alfa22.co.za
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Daily Report */}
+                  <Card className="p-6 border-2">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-primary/10 rounded-lg">
+                        <Mail className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-1">Daily Report</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Sent every day at 8:00 AM SAST
+                        </p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span>Schedule: Daily at 08:00</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            <span>Covers: Previous 24 hours</span>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => sendManualReport('daily')}
+                          disabled={sendingReport}
+                          className="w-full mt-4"
+                          variant="outline"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Now
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Weekly Report */}
+                  <Card className="p-6 border-2">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-primary/10 rounded-lg">
+                        <Mail className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-1">Weekly Report</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Sent every Monday at 9:00 AM SAST
+                        </p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span>Schedule: Mondays at 09:00</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            <span>Covers: Previous 7 days</span>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => sendManualReport('weekly')}
+                          disabled={sendingReport}
+                          className="w-full mt-4"
+                          variant="outline"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Now
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                <Card className="p-6 bg-muted/50">
+                  <h3 className="font-semibold mb-3">Report Contents</h3>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Summary statistics (total alerts, unique users, contacts notified)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>CSV attachment with complete alert details</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Preview of recent alerts in email body</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Device information and network details</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">•</span>
+                      <span>Location coordinates and Google Maps links</span>
+                    </li>
+                  </ul>
+                </Card>
+
+                <Card className="p-6 border-amber-200 bg-amber-50">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-amber-900 mb-1">Note</h3>
+                      <p className="text-sm text-amber-800">
+                        Reports are automatically sent to <strong>appcontrolroom@alfa22.co.za</strong>. 
+                        Use the "Send Now" buttons above to manually trigger a report for testing or immediate needs.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </Card>
           </TabsContent>
         </Tabs>
 
