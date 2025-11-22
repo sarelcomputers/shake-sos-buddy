@@ -46,6 +46,75 @@ export type Database = {
           },
         ]
       }
+      personal_info: {
+        Row: {
+          age: number | null
+          blood_type: string | null
+          created_at: string | null
+          friend_contact: string | null
+          friend_name: string | null
+          friend_surname: string | null
+          gender: string | null
+          home_address: string | null
+          id: string
+          medical_aid_name: string | null
+          medical_aid_number: string | null
+          name: string | null
+          spouse_contact: string | null
+          spouse_name: string | null
+          surname: string | null
+          updated_at: string | null
+          user_id: string
+          vehicle_brand: string | null
+          vehicle_color: string | null
+          vehicle_registration: string | null
+        }
+        Insert: {
+          age?: number | null
+          blood_type?: string | null
+          created_at?: string | null
+          friend_contact?: string | null
+          friend_name?: string | null
+          friend_surname?: string | null
+          gender?: string | null
+          home_address?: string | null
+          id?: string
+          medical_aid_name?: string | null
+          medical_aid_number?: string | null
+          name?: string | null
+          spouse_contact?: string | null
+          spouse_name?: string | null
+          surname?: string | null
+          updated_at?: string | null
+          user_id: string
+          vehicle_brand?: string | null
+          vehicle_color?: string | null
+          vehicle_registration?: string | null
+        }
+        Update: {
+          age?: number | null
+          blood_type?: string | null
+          created_at?: string | null
+          friend_contact?: string | null
+          friend_name?: string | null
+          friend_surname?: string | null
+          gender?: string | null
+          home_address?: string | null
+          id?: string
+          medical_aid_name?: string | null
+          medical_aid_number?: string | null
+          name?: string | null
+          spouse_contact?: string | null
+          spouse_name?: string | null
+          surname?: string | null
+          updated_at?: string | null
+          user_id?: string
+          vehicle_brand?: string | null
+          vehicle_color?: string | null
+          vehicle_registration?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
