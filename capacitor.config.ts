@@ -14,7 +14,21 @@ const config: CapacitorConfig = {
     },
     SmsManager: {
       // No specific configuration needed for basic SMS sending
+    },
+    BackgroundRunner: {
+      label: 'app.lovable.shake.sos.background',
+      src: 'runners/background.js',
+      event: 'shakeDetection',
+      repeat: true,
+      interval: 1, // Check every 1 minute
+      autoStart: false // Only start when user arms the system
     }
+  },
+  // Android-specific configuration
+  android: {
+    allowMixedContent: true,
+    captureInput: true,
+    webContentsDebuggingEnabled: true
   }
 };
 

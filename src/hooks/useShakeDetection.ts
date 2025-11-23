@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { storeMotionData } from '@/utils/backgroundRunner';
 
 interface ShakeDetectionOptions {
   threshold: number;
@@ -51,6 +52,9 @@ export const useShakeDetection = ({
       const x = acceleration.x || 0;
       const y = acceleration.y || 0;
       const z = acceleration.z || 0;
+      
+      // Store motion data for background runner
+      storeMotionData(x, y, z).catch(console.error);
 
       const deltaX = Math.abs(x - lastX);
       const deltaY = Math.abs(y - lastY);
