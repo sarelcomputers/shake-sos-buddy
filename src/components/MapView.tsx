@@ -1,5 +1,4 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 // Fix for default marker icons in Leaflet
@@ -28,7 +27,8 @@ export const MapView = ({ latitude, longitude, message, timestamp }: MapViewProp
       // @ts-ignore - react-leaflet types issue with center prop
       center={[latitude, longitude]}
       zoom={13}
-      style={{ height: '100%', width: '100%' }}
+      style={{ height: '100%', width: '100%', minHeight: '400px' }}
+      className="z-0"
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <Marker 
