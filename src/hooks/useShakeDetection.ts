@@ -19,7 +19,9 @@ export const useShakeDetection = ({
 }: ShakeDetectionOptions) => {
   const [shakeCount, setShakeCount] = useState(0);
   const lastShakeTime = useRef<number>(0);
+  const lastTriggerTime = useRef<number>(0);
   const resetTimeout = useRef<NodeJS.Timeout | null>(null);
+  const COOLDOWN_PERIOD = 2 * 60 * 1000; // 2 minutes in milliseconds
 
   useEffect(() => {
     if (!enabled) {
@@ -59,6 +61,15 @@ export const useShakeDetection = ({
       if (totalDelta > threshold && timeDiff > 0) {
         const now = Date.now();
         
+        // Check if we're still in cooldown period
+        const timeSinceLastTrigger = now - lastTriggerTime.current;
+        const inCooldown = lastTriggerTime.current > 0 && timeSinceLastTrigger < COOLDOWN_PERIOD;
+        
+        if (inCooldown) {
+          console.log(`Shake detected but in cooldown. ${Math.ceil((COOLDOWN_PERIOD - timeSinceLastTrigger) / 1000)}s remaining`);
+          return; // Ignore shakes during cooldown
+        }
+        
         if (resetTimeout.current) {
           clearTimeout(resetTimeout.current);
         }
@@ -69,6 +80,7 @@ export const useShakeDetection = ({
           Haptics.impact({ style: ImpactStyle.Medium });
           
           if (newCount >= requiredShakes) {
+            lastTriggerTime.current = Date.now(); // Record trigger time
             onShake();
             return 0;
           }
