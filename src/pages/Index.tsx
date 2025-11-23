@@ -23,6 +23,9 @@ import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { sendSOSMessages } from '@/utils/sms';
 import { toast } from '@/hooks/use-toast';
 import alfa22Logo from '@/assets/alfa22-logo.png';
+import { Preferences } from '@capacitor/preferences';
+import { Capacitor } from '@capacitor/core';
+import { checkBackgroundSOSTrigger } from '@/utils/backgroundRunner';
 
 const Index = () => {
   const { user } = useAuth();
@@ -57,6 +60,21 @@ const Index = () => {
     }
   }, []);
 
+  // Check for background SOS triggers when app is reopened
+  useEffect(() => {
+    if (!settings.enabled || !Capacitor.isNativePlatform()) return;
+    
+    const checkInterval = setInterval(async () => {
+      const shouldTrigger = await checkBackgroundSOSTrigger();
+      if (shouldTrigger) {
+        console.log('Background runner triggered SOS!');
+        await handleSOS();
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(checkInterval);
+  }, [settings.enabled]);
+
   const handlePermissionsComplete = () => {
     localStorage.setItem('permissions_setup_complete', 'true');
     setPermissionsComplete(true);
@@ -66,7 +84,7 @@ const Index = () => {
     });
   };
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     // Check if permissions are complete before enabling
     if (!permissionsComplete && !settings.enabled) {
       toast({
@@ -80,16 +98,65 @@ const Index = () => {
     const willBeEnabled = !settings.enabled;
     toggleEnabled();
     
+    // Store armed state for background runner
+    try {
+      await Preferences.set({
+        key: 'sos_armed',
+        value: willBeEnabled ? 'true' : 'false',
+      });
+      
+      // Store settings for background runner
+      await Preferences.set({
+        key: 'shake_sensitivity',
+        value: settings.sensitivity.toString(),
+      });
+      
+      await Preferences.set({
+        key: 'required_shakes',
+        value: settings.shakeCount.toString(),
+      });
+      
+      // Store user ID and contacts for background SOS trigger
+      if (user?.id) {
+        await Preferences.set({
+          key: 'user_id',
+          value: user.id,
+        });
+      }
+      
+      await Preferences.set({
+        key: 'sos_message',
+        value: settings.message,
+      });
+      
+      await Preferences.set({
+        key: 'contacts_json',
+        value: JSON.stringify(settings.contacts),
+      });
+      
+      await Preferences.set({
+        key: 'email_contacts_json',
+        value: JSON.stringify(settings.emailContacts),
+      });
+    } catch (error) {
+      console.error('Error storing background settings:', error);
+    }
+    
     if (willBeEnabled) {
+      const isNative = Capacitor.isNativePlatform();
+      const platform = Capacitor.getPlatform();
+      
       toast({
         title: "System Armed ✓",
-        description: "Device will stay awake and monitor for shakes even when screen is locked",
-        duration: 5000,
+        description: isNative 
+          ? `Background monitoring enabled. App will listen for shakes even when closed${platform === 'ios' ? ' (keep app in foreground on iOS)' : ''}.`
+          : "Device will stay awake and monitor for shakes even when screen is locked",
+        duration: 6000,
       });
     } else {
       toast({
         title: "System Disarmed",
-        description: "Shake detection disabled",
+        description: "Shake detection and background monitoring disabled",
       });
     }
   };
