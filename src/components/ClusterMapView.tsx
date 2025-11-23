@@ -1,6 +1,5 @@
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 // Fix for default marker icons in Leaflet
@@ -67,7 +66,8 @@ export const ClusterMapView = ({ locations, onMarkerClick }: ClusterMapViewProps
       // @ts-ignore - react-leaflet types issue with center prop
       center={getCenter()}
       zoom={getZoom()}
-      style={{ height: '100%', width: '100%' }}
+      style={{ height: '100%', width: '100%', minHeight: '400px' }}
+      className="z-0"
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       
