@@ -213,8 +213,12 @@ serve(async (req) => {
             <div style="background-color: white; padding: 15px; border-radius: 6px;">
       `;
 
+      // Basic Information
       if (personalInfo.name || personalInfo.surname) {
         emailBody += `<p style="margin: 5px 0;"><strong>Name:</strong> ${personalInfo.name || ''} ${personalInfo.surname || ''}</p>`;
+      }
+      if (personalInfo.id_number) {
+        emailBody += `<p style="margin: 5px 0;"><strong>ID Number:</strong> ${personalInfo.id_number}</p>`;
       }
       if (personalInfo.age) {
         emailBody += `<p style="margin: 5px 0;"><strong>Age:</strong> ${personalInfo.age}</p>`;
@@ -222,6 +226,11 @@ serve(async (req) => {
       if (personalInfo.gender) {
         emailBody += `<p style="margin: 5px 0;"><strong>Gender:</strong> ${personalInfo.gender}</p>`;
       }
+      if (personalInfo.home_address) {
+        emailBody += `<p style="margin: 5px 0;"><strong>Home Address:</strong> ${personalInfo.home_address}</p>`;
+      }
+      
+      // Medical Information
       if (personalInfo.blood_type) {
         emailBody += `<p style="margin: 5px 0;"><strong>Blood Type:</strong> ${personalInfo.blood_type}</p>`;
       }
@@ -231,11 +240,31 @@ serve(async (req) => {
       if (personalInfo.medical_aid_number) {
         emailBody += `<p style="margin: 5px 0;"><strong>Medical Aid Number:</strong> ${personalInfo.medical_aid_number}</p>`;
       }
-      if (personalInfo.home_address) {
-        emailBody += `<p style="margin: 5px 0;"><strong>Home Address:</strong> ${personalInfo.home_address}</p>`;
+      
+      // Emergency Contacts
+      if (personalInfo.spouse_name) {
+        emailBody += `<p style="margin: 10px 0 5px 0;"><strong>Spouse:</strong> ${personalInfo.spouse_name}`;
+        if (personalInfo.spouse_contact) {
+          emailBody += ` - ${personalInfo.spouse_contact}`;
+        }
+        emailBody += `</p>`;
       }
-      if (personalInfo.vehicle_registration) {
-        emailBody += `<p style="margin: 5px 0;"><strong>Vehicle:</strong> ${personalInfo.vehicle_brand || ''} ${personalInfo.vehicle_color || ''} - ${personalInfo.vehicle_registration}</p>`;
+      if (personalInfo.friend_name || personalInfo.friend_surname) {
+        emailBody += `<p style="margin: 5px 0;"><strong>Friend:</strong> ${personalInfo.friend_name || ''} ${personalInfo.friend_surname || ''}`;
+        if (personalInfo.friend_contact) {
+          emailBody += ` - ${personalInfo.friend_contact}`;
+        }
+        emailBody += `</p>`;
+      }
+      
+      // Vehicle Information
+      if (personalInfo.vehicle_registration || personalInfo.vehicle_brand || personalInfo.vehicle_color) {
+        emailBody += `<p style="margin: 10px 0 5px 0;"><strong>Vehicle:</strong> `;
+        const vehicleParts = [];
+        if (personalInfo.vehicle_brand) vehicleParts.push(personalInfo.vehicle_brand);
+        if (personalInfo.vehicle_color) vehicleParts.push(personalInfo.vehicle_color);
+        if (personalInfo.vehicle_registration) vehicleParts.push(`Reg: ${personalInfo.vehicle_registration}`);
+        emailBody += vehicleParts.join(' - ') + `</p>`;
       }
 
       emailBody += `
