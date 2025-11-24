@@ -67,16 +67,18 @@ class VoiceDetection {
       if (this.isAwaitingConfirmation) {
         // Listen for yes/no response
         if (transcript.includes('yes') || transcript === 'yes') {
-          console.log('User confirmed emergency');
+          console.log('✅ User confirmed "YES" - triggering emergency!');
           this.isAwaitingConfirmation = false;
           this.onConfirmation?.(true);
           this.stop();
         } else if (transcript.includes('no') || transcript === 'no') {
-          console.log('User cancelled emergency');
+          console.log('❌ User cancelled with "NO"');
           this.isAwaitingConfirmation = false;
           this.onConfirmation?.(false);
           // Continue listening for password
           this.isAwaitingConfirmation = false;
+        } else {
+          console.log('⏳ Still waiting for yes/no, heard:', transcript);
         }
       } else {
         // Listen for password
@@ -107,12 +109,13 @@ class VoiceDetection {
 
     this.recognition.onend = () => {
       console.log('Recognition ended');
-      // Restart if we should still be listening
-      if (this.isListening && !this.isAwaitingConfirmation) {
+      // Restart if we should still be listening (including when awaiting confirmation)
+      if (this.isListening) {
         setTimeout(() => {
           if (this.isListening) {
             try {
               this.recognition?.start();
+              console.log('Recognition restarted');
             } catch (e) {
               console.error('Failed to restart recognition:', e);
             }
