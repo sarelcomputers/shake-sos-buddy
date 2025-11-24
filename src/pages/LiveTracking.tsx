@@ -189,31 +189,34 @@ export default function LiveTracking() {
           )}
 
           {/* All location markers */}
-          {locations.map((loc, index) => (
-            <Marker
-              key={loc.id}
-              // @ts-ignore - react-leaflet types issue with position prop
-              position={[loc.latitude, loc.longitude]}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <p className="font-semibold mb-1">
-                    {index === locations.length - 1 ? 'Current Location' : `Point ${index + 1}`}
-                  </p>
-                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    {new Date(loc.timestamp).toLocaleTimeString()}
-                  </p>
-                  {loc.speed && (
-                    <p className="text-xs mt-1">Speed: {(loc.speed * 3.6).toFixed(1)} km/h</p>
-                  )}
-                  {loc.accuracy && (
-                    <p className="text-xs">Accuracy: ±{loc.accuracy.toFixed(0)}m</p>
-                  )}
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {locations.map((loc, index) => {
+            const MarkerAny = Marker as any;
+            return (
+              <MarkerAny
+                key={loc.id}
+                position={[loc.latitude, loc.longitude]}
+                icon={index === locations.length - 1 ? currentLocationIcon : pastLocationIcon}
+              >
+                <Popup>
+                  <div className="text-sm">
+                    <p className="font-semibold mb-1">
+                      {index === locations.length - 1 ? 'Current Location' : `Point ${index + 1}`}
+                    </p>
+                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      {new Date(loc.timestamp).toLocaleTimeString()}
+                    </p>
+                    {loc.speed && (
+                      <p className="text-xs mt-1">Speed: {(loc.speed * 3.6).toFixed(1)} km/h</p>
+                    )}
+                    {loc.accuracy && (
+                      <p className="text-xs">Accuracy: ±{loc.accuracy.toFixed(0)}m</p>
+                    )}
+                  </div>
+                </Popup>
+              </MarkerAny>
+            );
+          })}
         </MapContainer>
       </div>
 
