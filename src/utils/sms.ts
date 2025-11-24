@@ -209,6 +209,24 @@ export const sendSOSMessages = async (
         }
       });
     }
+
+    // Get emergency Telegram contacts and send Telegram messages
+    const { data: telegramContacts } = await supabase
+      .from('emergency_telegram')
+      .select('*')
+      .eq('user_id', userId!);
+    
+    if (telegramContacts && telegramContacts.length > 0) {
+      console.log('Sending Telegram messages to emergency contacts...');
+      const chatIds = telegramContacts.map(c => c.chat_id);
+      
+      await supabase.functions.invoke('send-telegram', {
+        body: {
+          chatIds,
+          message: fullMessage
+        }
+      });
+    }
     
     // Success haptic
     await Haptics.impact({ style: ImpactStyle.Heavy });

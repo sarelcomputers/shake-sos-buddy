@@ -22,6 +22,13 @@ export interface WhatsAppContact {
   is_group?: boolean;
 }
 
+export interface TelegramContact {
+  id: string;
+  name: string;
+  chat_id: string;
+  is_group?: boolean;
+}
+
 export interface SOSSettings {
   enabled: boolean;
   message: string;
@@ -30,15 +37,18 @@ export interface SOSSettings {
   testEmailMessage: string;
   whatsappMessage: string;
   testWhatsAppMessage: string;
+  telegramMessage: string;
+  testTelegramMessage: string;
   sensitivity: number;
   shakeCount: number;
   voiceAlertEnabled: boolean;
   voicePassword: string;
   smsTriggerEnabled: boolean;
-  cooldownPeriod: number; // in seconds
+  cooldownPeriod: number;
   contacts: Contact[];
   emailContacts: EmailContact[];
   whatsappContacts: WhatsAppContact[];
+  telegramContacts: TelegramContact[];
 }
 
 const DEFAULT_SETTINGS: SOSSettings = {
@@ -49,15 +59,18 @@ const DEFAULT_SETTINGS: SOSSettings = {
   testEmailMessage: '[TEST] This is a test of your emergency email alert system. No action needed.',
   whatsappMessage: 'EMERGENCY! I need help at this location:',
   testWhatsAppMessage: '[TEST] This is a test of your emergency WhatsApp alert system. No action needed.',
+  telegramMessage: '🚨 EMERGENCY ALERT! I need immediate help at this location.',
+  testTelegramMessage: '[TEST] This is a test of your emergency Telegram alert system. No action needed.',
   sensitivity: 15,
   shakeCount: 5,
   voiceAlertEnabled: true,
   voicePassword: '',
   smsTriggerEnabled: true,
-  cooldownPeriod: 120, // 2 minutes default
+  cooldownPeriod: 120,
   contacts: [],
   emailContacts: [],
   whatsappContacts: [],
+  telegramContacts: [],
 };
 
 export const useSOSSettings = () => {
@@ -71,6 +84,7 @@ export const useSOSSettings = () => {
       fetchContacts();
       fetchEmailContacts();
       fetchWhatsAppContacts();
+      fetchTelegramContacts();
     } else {
       setLoading(false);
     }
@@ -97,6 +111,8 @@ export const useSOSSettings = () => {
           testEmailMessage: data.test_email_message || DEFAULT_SETTINGS.testEmailMessage,
           whatsappMessage: data.message,
           testWhatsAppMessage: data.test_whatsapp_message || DEFAULT_SETTINGS.testWhatsAppMessage,
+          telegramMessage: data.telegram_message || DEFAULT_SETTINGS.telegramMessage,
+          testTelegramMessage: data.test_telegram_message || DEFAULT_SETTINGS.testTelegramMessage,
           sensitivity: parseInt(data.shake_sensitivity) || 15,
           shakeCount: 5,
           voiceAlertEnabled: data.voice_alert_enabled ?? true,
@@ -171,6 +187,26 @@ export const useSOSSettings = () => {
     }
   };
 
+  const fetchTelegramContacts = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('emergency_telegram')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setSettings(prev => ({
+        ...prev,
+        telegramContacts: data || [],
+      }));
+    } catch (error) {
+      console.error('Error fetching Telegram contacts:', error);
+    }
+  };
+
   const saveSettings = async (newSettings: Partial<SOSSettings>) => {
     if (!user) return;
 
@@ -186,6 +222,8 @@ export const useSOSSettings = () => {
           email_message: updated.emailMessage,
           test_email_message: updated.testEmailMessage,
           test_whatsapp_message: updated.testWhatsAppMessage,
+          telegram_message: updated.telegramMessage,
+          test_telegram_message: updated.testTelegramMessage,
           shake_sensitivity: updated.sensitivity.toString(),
           voice_alert_enabled: updated.voiceAlertEnabled,
           voice_password: updated.voicePassword,
@@ -226,6 +264,14 @@ export const useSOSSettings = () => {
 
   const updateTestWhatsAppMessage = (testWhatsAppMessage: string) => {
     saveSettings({ testWhatsAppMessage });
+  };
+
+  const updateTelegramMessage = (telegramMessage: string) => {
+    saveSettings({ telegramMessage });
+  };
+
+  const updateTestTelegramMessage = (testTelegramMessage: string) => {
+    saveSettings({ testTelegramMessage });
   };
 
   const updateSensitivity = (sensitivity: number) => {
@@ -406,6 +452,58 @@ export const useSOSSettings = () => {
     }
   };
 
+  const addTelegramContact = async (contact: Omit<TelegramContact, 'id'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('emergency_telegram')
+        .insert([{
+          user_id: user.id,
+          name: contact.name,
+          chat_id: contact.chat_id,
+          is_group: contact.is_group || false,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSettings(prev => ({
+        ...prev,
+        telegramContacts: [...prev.telegramContacts, data],
+      }));
+
+      toast.success('Telegram contact added successfully');
+    } catch (error: any) {
+      console.error('Error adding Telegram contact:', error);
+      toast.error(error.message || 'Failed to add Telegram contact');
+    }
+  };
+
+  const removeTelegramContact = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('emergency_telegram')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSettings(prev => ({
+        ...prev,
+        telegramContacts: prev.telegramContacts.filter(c => c.id !== id),
+      }));
+
+      toast.success('Telegram contact deleted');
+    } catch (error: any) {
+      console.error('Error deleting Telegram contact:', error);
+      toast.error('Failed to delete Telegram contact');
+    }
+  };
+
   return {
     settings,
     loading,
@@ -416,6 +514,8 @@ export const useSOSSettings = () => {
     updateTestEmailMessage,
     updateWhatsAppMessage,
     updateTestWhatsAppMessage,
+    updateTelegramMessage,
+    updateTestTelegramMessage,
     updateSensitivity,
     updateShakeCount,
     updateVoiceAlertEnabled,
@@ -428,5 +528,7 @@ export const useSOSSettings = () => {
     removeEmailContact,
     addWhatsAppContact,
     removeWhatsAppContact,
+    addTelegramContact,
+    removeTelegramContact,
   };
 };

@@ -102,6 +102,41 @@ export type Database = {
           },
         ]
       }
+      emergency_telegram: {
+        Row: {
+          chat_id: string
+          created_at: string | null
+          id: string
+          is_group: boolean | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string | null
+          id?: string
+          is_group?: boolean | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string | null
+          id?: string
+          is_group?: boolean | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_telegram_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_whatsapp: {
         Row: {
           created_at: string | null
@@ -365,8 +400,10 @@ export type Database = {
           message: string
           shake_sensitivity: string
           sms_trigger_enabled: boolean
+          telegram_message: string | null
           test_email_message: string
           test_message: string
+          test_telegram_message: string | null
           test_whatsapp_message: string | null
           updated_at: string
           user_id: string
@@ -379,8 +416,10 @@ export type Database = {
           message?: string
           shake_sensitivity?: string
           sms_trigger_enabled?: boolean
+          telegram_message?: string | null
           test_email_message?: string
           test_message?: string
+          test_telegram_message?: string | null
           test_whatsapp_message?: string | null
           updated_at?: string
           user_id: string
@@ -393,8 +432,10 @@ export type Database = {
           message?: string
           shake_sensitivity?: string
           sms_trigger_enabled?: boolean
+          telegram_message?: string | null
           test_email_message?: string
           test_message?: string
+          test_telegram_message?: string | null
           test_whatsapp_message?: string | null
           updated_at?: string
           user_id?: string
