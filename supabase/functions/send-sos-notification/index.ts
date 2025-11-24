@@ -15,13 +15,10 @@ interface SOSNotificationRequest {
   deviceSerial?: string;
   ipAddress?: string;
   networkISP?: string;
-  wifiInfo?: any;
+  wifiNames?: string;
   personalInfo?: any;
   trackingUrl?: string;
   contactsNotified?: number;
-  audioUrl?: string;
-  photoUrls?: string[];
-  audioDuration?: number;
 }
 
 serve(async (req) => {
@@ -44,16 +41,13 @@ serve(async (req) => {
       deviceSerial,
       ipAddress,
       networkISP,
-      wifiInfo,
+      wifiNames,
       personalInfo,
       trackingUrl,
       contactsNotified,
-      audioUrl,
-      photoUrls,
-      audioDuration
     }: SOSNotificationRequest = await req.json();
 
-    console.log('Received enhanced SOS notification request with attachments');
+    console.log('Received simplified SOS notification request');
 
     // Fetch user profile
     const { data: profile, error: profileError } = await supabase
@@ -94,7 +88,7 @@ serve(async (req) => {
       `;
     }
 
-    // Create HTML email with enhanced attachments
+    // Create HTML email
     const htmlBody = `
       <!DOCTYPE html>
       <html>
@@ -113,13 +107,13 @@ serve(async (req) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🚨 ENHANCED SOS ALERT</h1>
+              <h1>🚨 SOS ALERT</h1>
               <p style="margin: 5px 0 0 0; font-size: 16px;">Emergency assistance requested</p>
             </div>
             <div class="content">
               <div class="alert-box">
                 <strong>⚠️ IMMEDIATE ATTENTION REQUIRED</strong>
-                <p style="margin: 5px 0 0 0;">This is an enhanced SOS alert with audio recording, photos, and location tracking.</p>
+                <p style="margin: 5px 0 0 0;">This is an SOS alert with location tracking and personal information.</p>
               </div>
 
               <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
@@ -131,7 +125,7 @@ serve(async (req) => {
                 <p style="color: #666; margin: 5px 0;"><strong>Location:</strong> ${latitude}, ${longitude}</p>
                 <div style="text-align: center; margin-top: 15px;">
                   <a href="${locationUrl}" class="btn">📍 View on Google Maps</a>
-                  ${trackingUrl ? `<a href="${trackingUrl}" class="btn" style="background-color: #991b1b;">🔴 Live Tracking (3 min)</a>` : ''}
+                  ${trackingUrl ? `<a href="${trackingUrl}" class="btn" style="background-color: #991b1b;">🔴 Live Tracking (5 min)</a>` : ''}
                 </div>
               </div>
 
@@ -143,27 +137,10 @@ serve(async (req) => {
                 <p style="color: #666; margin: 0;"><strong>Network ISP:</strong> ${networkISP || 'Unknown'}</p>
               </div>
               
-              ${audioUrl ? `
+              ${wifiNames ? `
               <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                <h3 style="color: #333; margin-top: 0;">🎤 Audio Recording</h3>
-                <p style="color: #666; margin: 0;"><strong>Duration:</strong> ${audioDuration || 15} seconds</p>
-                <p style="color: #666; margin: 5px 0 0 0;"><a href="${audioUrl}" style="color: #dc2626; text-decoration: none;">Download Audio Recording</a></p>
-              </div>
-              ` : ''}
-              
-              ${photoUrls && photoUrls.length > 0 ? `
-              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                <h3 style="color: #333; margin-top: 0;">📸 Camera Captures (${photoUrls.length} photos)</h3>
-                ${photoUrls.map((url, i) => `
-                  <p style="color: #666; margin: 5px 0;"><a href="${url}" style="color: #dc2626; text-decoration: none;">Photo ${i + 1}</a></p>
-                `).join('')}
-              </div>
-              ` : ''}
-              
-              ${wifiInfo ? `
-              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                <h3 style="color: #333; margin-top: 0;">📡 Network Information</h3>
-                <pre style="color: #666; margin: 0; white-space: pre-wrap; font-family: monospace; font-size: 12px;">${typeof wifiInfo === 'string' ? wifiInfo : JSON.stringify(wifiInfo, null, 2)}</pre>
+                <h3 style="color: #333; margin-top: 0;">📡 Nearby WiFi Networks</h3>
+                <p style="color: #666; margin: 0;">${wifiNames}</p>
               </div>
               ` : ''}
 
@@ -183,11 +160,11 @@ serve(async (req) => {
     const emailData = {
       from: Deno.env.get('GMAIL_USER'),
       to: 'appcontrolroom@alfa22.co.za',
-      subject: `🚨 ENHANCED SOS ALERT - ${profile.email} - ${timestamp}`,
+      subject: `🚨 SOS ALERT - ${profile.email} - ${timestamp}`,
       html: htmlBody,
     };
 
-    console.log('Sending enhanced email to:', emailData.to);
+    console.log('Sending email to:', emailData.to);
 
     const gmailResponse = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
@@ -209,10 +186,10 @@ serve(async (req) => {
       throw new Error('Failed to send email');
     }
 
-    console.log('Enhanced email sent successfully');
+    console.log('Email sent successfully');
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Enhanced notification sent with attachments' }),
+      JSON.stringify({ success: true, message: 'Notification sent' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

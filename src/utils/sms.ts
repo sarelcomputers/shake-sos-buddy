@@ -4,7 +4,7 @@ import { Network } from '@capacitor/network';
 import { supabase } from '@/integrations/supabase/client';
 import { startLocationTracking, generateTrackingUrl } from './locationTracking';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { captureEnhancedSOSData, uploadSOSFiles } from './enhancedSOS';
+import { captureSimplifiedSOSData } from './enhancedSOS';
 
 export const sendSOSMessages = async (
   message: string,
@@ -31,20 +31,82 @@ export const sendSOSMessages = async (
       }
     }
 
-    console.log('🚨 ENHANCED SOS TRIGGERED - Starting 15-second capture...');
+    console.log('🚨 SOS TRIGGERED - Capturing WiFi data...');
     
-    // Capture enhanced SOS data (audio, photos, WiFi) - takes 15 seconds
-    const enhancedData = await captureEnhancedSOSData();
+    // Capture simplified SOS data (just WiFi)
+    const simplifiedData = await captureSimplifiedSOSData();
     
-    console.log('✅ Capture complete! Sending alert now...');
+    // Capture device and network information
+    const deviceInfo = await Device.getInfo();
+    const deviceId = await Device.getId();
+    const networkStatus = await Network.getStatus();
+
+    // Get IP address
+    let ipAddress = null;
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipResponse.json();
+      ipAddress = ipData.ip;
+    } catch (error) {
+      console.error('Error getting IP address:', error);
+    }
+
+    // Log SOS event to history
+    const { data: sosHistoryData, error: sosHistoryError } = await supabase
+      .from('sos_history')
+      .insert([{
+        user_id: userId!,
+        latitude,
+        longitude,
+        message,
+        contacts_count: contacts.length,
+        contacted_recipients: [],
+        device_model: `${deviceInfo.manufacturer} ${deviceInfo.model}`,
+        device_serial: deviceId.identifier,
+        ip_address: ipAddress,
+        network_isp: networkStatus.connectionType,
+        wifi_info: simplifiedData.wifiInfo as any,
+        personal_info: personalInfo,
+      }])
+      .select()
+      .single();
+    
+    if (sosHistoryError) {
+      console.error('Error logging SOS history:', sosHistoryError);
+      throw sosHistoryError;
+    }
+
+    // Start live location tracking (5 minutes)
+    console.log('Starting live location tracking (5 minutes)...');
+    startLocationTracking({
+      sosHistoryId: sosHistoryData.id,
+      userId: userId!,
+      durationMinutes: 5
+    });
+
+    // Generate tracking URL (valid for 5 minutes)
+    const trackingUrl = generateTrackingUrl(sosHistoryData.id);
     
     // Format personal info for message if available
     let personalInfoText = '';
     if (personalInfo) {
-      personalInfoText = `\n\nPersonal Information:\nName: ${personalInfo.name || 'N/A'} ${personalInfo.surname || ''}\nAge: ${personalInfo.age || 'N/A'}\nGender: ${personalInfo.gender || 'N/A'}\nBlood Type: ${personalInfo.blood_type || 'N/A'}\nMedical Aid: ${personalInfo.medical_aid_name || 'N/A'} (${personalInfo.medical_aid_number || 'N/A'})\nHome Address: ${personalInfo.home_address || 'N/A'}\nVehicle: ${personalInfo.vehicle_brand || 'N/A'} ${personalInfo.vehicle_color || ''} (${personalInfo.vehicle_registration || 'N/A'})\nSpouse: ${personalInfo.spouse_name || 'N/A'} (${personalInfo.spouse_contact || 'N/A'})\nFriend: ${personalInfo.friend_name || 'N/A'} ${personalInfo.friend_surname || ''} (${personalInfo.friend_contact || 'N/A'})`;
+      const parts = [];
+      if (personalInfo.name || personalInfo.surname) parts.push(`Name: ${personalInfo.name || ''} ${personalInfo.surname || ''}`);
+      if (personalInfo.age) parts.push(`Age: ${personalInfo.age}`);
+      if (personalInfo.gender) parts.push(`Gender: ${personalInfo.gender}`);
+      if (personalInfo.blood_type) parts.push(`Blood: ${personalInfo.blood_type}`);
+      if (personalInfo.medical_aid_name) parts.push(`Medical Aid: ${personalInfo.medical_aid_name}`);
+      if (personalInfo.home_address) parts.push(`Address: ${personalInfo.home_address}`);
+      if (personalInfo.vehicle_registration) parts.push(`Vehicle: ${personalInfo.vehicle_brand || ''} ${personalInfo.vehicle_registration}`);
+      
+      if (parts.length > 0) {
+        personalInfoText = `\n\nPersonal Info:\n${parts.join('\n')}`;
+      }
     }
     
-    const fullMessage = `${message}\n${locationUrl}${personalInfoText}`;
+    const fullMessage = `${message}\n\n📍 Location: ${locationUrl}\n\n🔴 Live Tracking (5min): ${trackingUrl}${personalInfoText}\n\n📡 Nearby WiFi: ${simplifiedData.wifiNames}`;
+    
+    console.log('✅ Sending SMS and Email alerts...');
     
     // Send SMS to all contacts
     const results = await Promise.allSettled(
@@ -75,118 +137,65 @@ export const sendSOSMessages = async (
       console.warn(`${failedCount} messages failed to send`);
     }
     
-    // Background tasks: Start long-running processes without blocking the main flow
-    (async () => {
-      // Capture device and network information
-      const deviceInfo = await Device.getInfo();
-      const deviceId = await Device.getId();
-      const networkStatus = await Network.getStatus();
-
-      // Get IP address
-      let ipAddress = null;
-      try {
-        const ipResponse = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipResponse.json();
-        ipAddress = ipData.ip;
-      } catch (error) {
-        console.error('Error getting IP address:', error);
-      }
-
-      // Upload enhanced SOS files to storage
-      let fileUrls = { audioUrl: '', photoUrls: [] as string[] };
-      try {
-        fileUrls = await uploadSOSFiles(userId!, userId!, enhancedData);
-        console.log('Files uploaded successfully:', fileUrls);
-      } catch (error) {
-        console.error('Error uploading SOS files:', error);
-      }
-
-      // Log SOS event to history with all captured data
-      const { data: sosHistoryData, error: sosHistoryError } = await supabase
-        .from('sos_history')
-        .insert([{
-          user_id: userId!,
-          latitude,
-          longitude,
-          message,
-          contacts_count: contacts.length,
-          contacted_recipients: successfulContacts.map(c => ({
-            name: c.name,
-            phone: c.phone,
-            timestamp: new Date().toISOString()
-          })),
-          device_model: `${deviceInfo.manufacturer} ${deviceInfo.model}`,
-          device_serial: deviceId.identifier,
-          ip_address: ipAddress,
-          network_isp: networkStatus.connectionType,
-          wifi_info: enhancedData.wifiInfo as any,
-          personal_info: personalInfo,
-          audio_duration_seconds: enhancedData.audioDuration,
-          audio_transcript: null // Will be updated after transcription
-        }])
-        .select()
-        .single();
-      
-      if (sosHistoryError) {
-        console.error('Error logging SOS history:', sosHistoryError);
-        return;
-      }
-
-      // Start live location tracking (3 minutes)
-      console.log('Starting live location tracking (3 minutes)...');
-      await startLocationTracking({
-        sosHistoryId: sosHistoryData.id,
+    // Update SOS history with successful contacts
+    await supabase
+      .from('sos_history')
+      .update({
+        contacted_recipients: successfulContacts.map(c => ({
+          name: c.name,
+          phone: c.phone,
+          timestamp: new Date().toISOString()
+        }))
+      })
+      .eq('id', sosHistoryData.id);
+    
+    // Send notification to control room
+    console.log('Sending control room notification...');
+    await supabase.functions.invoke('send-sos-notification', {
+      body: {
         userId: userId!,
-        durationMinutes: 3
-      });
-
-      // Send enhanced control room notification with all attachments
-      console.log('Sending enhanced control room notification with attachments...');
-      const trackingUrl = generateTrackingUrl(sosHistoryData.id);
-      
-      await supabase.functions.invoke('send-sos-notification', {
-        body: {
-          userId: userId!,
-          message,
-          latitude,
-          longitude,
-          deviceModel: `${deviceInfo.manufacturer} ${deviceInfo.model}`,
-          deviceSerial: deviceId.identifier,
-          ipAddress,
-          networkISP: networkStatus.connectionType,
-          wifiInfo: enhancedData.wifiFormatted,
-          personalInfo,
-          trackingUrl,
-          contactsNotified: successfulContacts.length,
-          audioUrl: fileUrls.audioUrl,
-          photoUrls: fileUrls.photoUrls,
-          audioDuration: enhancedData.audioDuration
-        }
-      });
-      
-      // Transcribe audio in background and update history
-      console.log('Starting audio transcription...');
-      try {
-        const transcribeResponse = await supabase.functions.invoke('transcribe-audio', {
-          body: { audio: enhancedData.audioBase64 }
-        });
-        
-        const audioTranscript = transcribeResponse.data?.text || null;
-        console.log('Transcription complete:', audioTranscript ? 'Success' : 'No transcript');
-        
-        if (audioTranscript) {
-          await supabase
-            .from('sos_history')
-            .update({ audio_transcript: audioTranscript })
-            .eq('id', sosHistoryData.id);
-        }
-      } catch (error) {
-        console.error('Error transcribing audio:', error);
+        message,
+        latitude,
+        longitude,
+        deviceModel: `${deviceInfo.manufacturer} ${deviceInfo.model}`,
+        deviceSerial: deviceId.identifier,
+        ipAddress,
+        networkISP: networkStatus.connectionType,
+        wifiNames: simplifiedData.wifiNames,
+        personalInfo,
+        trackingUrl,
+        contactsNotified: successfulContacts.length,
       }
-      
-      // Success haptic
-      await Haptics.impact({ style: ImpactStyle.Heavy });
-    })();
+    });
+    
+    // Get emergency email contacts and send emails
+    const { data: emailContacts } = await supabase
+      .from('emergency_emails')
+      .select('*')
+      .eq('user_id', userId!);
+    
+    if (emailContacts && emailContacts.length > 0) {
+      console.log('Sending emails to emergency contacts...');
+      await Promise.allSettled(
+        emailContacts.map(async (contact) => {
+          await supabase.functions.invoke('send-emergency-email', {
+            body: {
+              to: contact.email,
+              name: contact.name,
+              subject: '🚨 EMERGENCY ALERT',
+              message,
+              location: locationUrl,
+              trackingUrl,
+              personalInfo,
+              wifiNames: simplifiedData.wifiNames
+            }
+          });
+        })
+      );
+    }
+    
+    // Success haptic
+    await Haptics.impact({ style: ImpactStyle.Heavy });
 
     return true;
   } catch (error) {

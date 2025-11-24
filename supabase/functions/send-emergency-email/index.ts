@@ -14,6 +14,7 @@ interface EmailRequest {
   location?: string;
   trackingUrl?: string;
   personalInfo?: any;
+  wifiNames?: string;
 }
 
 serve(async (req) => {
@@ -22,7 +23,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, name, subject, message, location, trackingUrl, personalInfo }: EmailRequest = await req.json();
+    const { to, name, subject, message, location, trackingUrl, personalInfo, wifiNames }: EmailRequest = await req.json();
 
     console.log('Sending email to:', to);
 
@@ -61,7 +62,7 @@ serve(async (req) => {
     if (trackingUrl) {
       emailBody += `
           <div style="margin: 20px 0;">
-            <h3 style="color: #111827; margin-bottom: 10px;">🗺️ Live Location Tracking</h3>
+            <h3 style="color: #111827; margin-bottom: 10px;">🗺️ Live Location Tracking (5 Minutes)</h3>
             <a href="${trackingUrl}" 
                style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
               View Live Location
@@ -69,6 +70,15 @@ serve(async (req) => {
             <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
               Click the button above to track the live location for the next 5 minutes
             </p>
+          </div>
+      `;
+    }
+
+    if (wifiNames) {
+      emailBody += `
+          <div style="margin: 20px 0;">
+            <h3 style="color: #111827; margin-bottom: 10px;">📡 Nearby WiFi Networks</h3>
+            <p style="color: #4b5563;">${wifiNames}</p>
           </div>
       `;
     }
