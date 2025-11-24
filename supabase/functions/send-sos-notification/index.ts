@@ -18,6 +18,7 @@ interface SOSNotificationRequest {
   wifiNames?: string;
   personalInfo?: any;
   trackingUrl?: string;
+  photoUrl?: string;
   contactsNotified?: number;
 }
 
@@ -44,6 +45,7 @@ serve(async (req) => {
       wifiNames,
       personalInfo,
       trackingUrl,
+      photoUrl,
       contactsNotified,
     }: SOSNotificationRequest = await req.json();
 
@@ -141,6 +143,14 @@ serve(async (req) => {
               <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
                 <h3 style="color: #333; margin-top: 0;">📡 Nearby WiFi Networks</h3>
                 <p style="color: #666; margin: 0;">${wifiNames}</p>
+              </div>
+              ` : ''}
+
+              ${photoUrl ? `
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+                <h3 style="color: #333; margin-top: 0;">📷 Emergency Photo</h3>
+                <img src="${photoUrl}" alt="Emergency photo from device" style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #dc2626; margin-top: 10px;" />
+                <p style="color: #666; font-size: 14px; margin-top: 10px;">Photo captured from the front camera at the time of alert</p>
               </div>
               ` : ''}
 

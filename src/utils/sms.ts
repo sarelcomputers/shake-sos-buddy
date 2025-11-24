@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { startLocationTracking, generateTrackingUrl } from './locationTracking';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { captureSimplifiedSOSData } from './enhancedSOS';
+import { cameraCapture } from './cameraCapture';
 
 export const sendSOSMessages = async (
   message: string,
@@ -16,6 +17,21 @@ export const sendSOSMessages = async (
     const position = await Geolocation.getCurrentPosition();
     const { latitude, longitude } = position.coords;
     const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    
+    // Capture emergency photo from front camera
+    console.log('📸 Capturing emergency photo...');
+    let photoUrl: string | null = null;
+    try {
+      photoUrl = await cameraCapture.captureEmergencyPhoto(userId!);
+      if (photoUrl) {
+        console.log('✅ Photo captured and uploaded');
+      } else {
+        console.warn('⚠️ Failed to capture photo, continuing without it');
+      }
+    } catch (error) {
+      console.error('Error capturing photo:', error);
+      console.warn('⚠️ Continuing without photo');
+    }
     
     // Fetch personal information if userId is provided
     let personalInfo = null;
@@ -104,7 +120,7 @@ export const sendSOSMessages = async (
       }
     }
     
-    const fullMessage = `${message}\n\n📍 Location: ${locationUrl}\n\n🔴 Live Tracking (5min): ${trackingUrl}${personalInfoText}\n\n📡 Nearby WiFi: ${simplifiedData.wifiNames}`;
+    const fullMessage = `${message}\n\n📍 Location: ${locationUrl}\n\n🔴 Live Tracking (5min): ${trackingUrl}${photoUrl ? `\n\n📷 Photo: ${photoUrl}` : ''}${personalInfoText}\n\n📡 Nearby WiFi: ${simplifiedData.wifiNames}`;
     
     console.log('✅ Sending SMS and Email alerts...');
     
@@ -164,6 +180,7 @@ export const sendSOSMessages = async (
         wifiNames: simplifiedData.wifiNames,
         personalInfo,
         trackingUrl,
+        photoUrl,
         contactsNotified: successfulContacts.length,
       }
     });
@@ -187,7 +204,8 @@ export const sendSOSMessages = async (
               location: locationUrl,
               trackingUrl,
               personalInfo,
-              wifiNames: simplifiedData.wifiNames
+              wifiNames: simplifiedData.wifiNames,
+              photoUrl
             }
           });
         })
