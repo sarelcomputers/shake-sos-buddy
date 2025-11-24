@@ -26,6 +26,7 @@ export interface SOSSettings {
   voiceAlertEnabled: boolean;
   voicePassword: string;
   smsTriggerEnabled: boolean;
+  cooldownPeriod: number; // in seconds
   contacts: Contact[];
   emailContacts: EmailContact[];
 }
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: SOSSettings = {
   voiceAlertEnabled: true,
   voicePassword: '',
   smsTriggerEnabled: true,
+  cooldownPeriod: 120, // 2 minutes default
   contacts: [],
   emailContacts: [],
 };
@@ -201,6 +203,10 @@ export const useSOSSettings = () => {
     saveSettings({ smsTriggerEnabled: enabled });
   };
 
+  const updateCooldownPeriod = (period: number) => {
+    saveSettings({ cooldownPeriod: period });
+  };
+
   const addContact = async (contact: Omit<Contact, 'id'>) => {
     if (!user) return;
 
@@ -316,6 +322,7 @@ export const useSOSSettings = () => {
     updateVoiceAlertEnabled,
     updateVoicePassword,
     updateSmsTriggerEnabled,
+    updateCooldownPeriod,
     addContact,
     removeContact,
     addEmailContact,

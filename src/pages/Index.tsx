@@ -47,6 +47,7 @@ const Index = () => {
     updateVoiceAlertEnabled,
     updateVoicePassword,
     updateSmsTriggerEnabled,
+    updateCooldownPeriod,
     addContact,
     removeContact,
     addEmailContact,
@@ -516,6 +517,7 @@ const Index = () => {
     resetTime: 3000,
     onShake: handleSOS,
     enabled: settings.enabled,
+    cooldownPeriod: settings.cooldownPeriod * 1000, // Convert seconds to milliseconds
   });
 
   if (loading || subscriptionLoading) {
@@ -654,6 +656,7 @@ const Index = () => {
               voiceAlertEnabled={settings.voiceAlertEnabled}
               voicePassword={settings.voicePassword}
               smsTriggerEnabled={settings.smsTriggerEnabled}
+              cooldownPeriod={settings.cooldownPeriod}
               onMessageChange={updateMessage}
               onTestMessageChange={updateTestMessage}
               onEmailMessageChange={updateEmailMessage}
@@ -663,6 +666,7 @@ const Index = () => {
               onVoiceAlertEnabledChange={updateVoiceAlertEnabled}
               onVoicePasswordChange={updateVoicePassword}
               onSmsTriggerEnabledChange={updateSmsTriggerEnabled}
+              onCooldownPeriodChange={updateCooldownPeriod}
             />
           </TabsContent>
 
