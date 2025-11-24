@@ -1,302 +1,197 @@
 import { Geolocation } from '@capacitor/geolocation';
-import { Haptics, NotificationType } from '@capacitor/haptics';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
 import { supabase } from '@/integrations/supabase/client';
-import { VoiceRecorder, blobToBase64 } from './voiceRecorder';
 import { startLocationTracking, generateTrackingUrl } from './locationTracking';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { captureEnhancedSOSData, uploadSOSFiles } from './enhancedSOS';
 
 export const sendSOSMessages = async (
-  message: string, 
+  message: string,
   contacts: Array<{ phone: string; name: string }>,
   userId?: string
-) => {
+): Promise<boolean> => {
   try {
     // Get current location
-    const position = await Geolocation.getCurrentPosition({
-      enableHighAccuracy: true,
-      timeout: 10000,
-    });
-
+    const position = await Geolocation.getCurrentPosition();
     const { latitude, longitude } = position.coords;
-
-    // Fetch personal information early
+    const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+    
+    // Fetch personal information if userId is provided
     let personalInfo = null;
     if (userId) {
-      try {
-        const { data: personalData } = await supabase
-          .from('personal_info')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-        
-        if (personalData) {
-          personalInfo = personalData;
-        }
-      } catch (error) {
-        console.error('Failed to fetch personal info:', error);
+      const { data, error } = await supabase
+        .from('personal_info')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (!error && data) {
+        personalInfo = data;
       }
     }
 
-    console.log('Sending SOS via device SMS to', contacts.length, 'contacts');
-
-    const locationUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
+    console.log('🚨 ENHANCED SOS TRIGGERED - Starting 20-second capture process...');
     
-    // Format personal information for SMS
+    // Capture enhanced SOS data (audio, photos, WiFi) - takes 20 seconds
+    const enhancedData = await captureEnhancedSOSData();
+    
+    console.log('Enhanced data captured, proceeding with alert...');
+    
+    // Format personal info for message if available
     let personalInfoText = '';
     if (personalInfo) {
-      const parts = [];
-      
-      if (personalInfo.name || personalInfo.surname) {
-        parts.push(`Name: ${[personalInfo.name, personalInfo.surname].filter(Boolean).join(' ')}`);
-      }
-      if (personalInfo.age) parts.push(`Age: ${personalInfo.age}`);
-      if (personalInfo.gender) parts.push(`Gender: ${personalInfo.gender}`);
-      if (personalInfo.blood_type) parts.push(`Blood Type: ${personalInfo.blood_type}`);
-      
-      if (personalInfo.medical_aid_name) {
-        parts.push(`Medical Aid: ${personalInfo.medical_aid_name}${personalInfo.medical_aid_number ? ` (${personalInfo.medical_aid_number})` : ''}`);
-      }
-      
-      if (personalInfo.home_address) parts.push(`Address: ${personalInfo.home_address}`);
-      
-      if (personalInfo.vehicle_registration || personalInfo.vehicle_brand) {
-        const vehicle = [personalInfo.vehicle_brand, personalInfo.vehicle_color, personalInfo.vehicle_registration]
-          .filter(Boolean)
-          .join(' ');
-        parts.push(`Vehicle: ${vehicle}`);
-      }
-      
-      if (personalInfo.spouse_name && personalInfo.spouse_contact) {
-        parts.push(`Spouse: ${personalInfo.spouse_name} (${personalInfo.spouse_contact})`);
-      }
-      
-      if (personalInfo.friend_name && personalInfo.friend_contact) {
-        const friendName = [personalInfo.friend_name, personalInfo.friend_surname].filter(Boolean).join(' ');
-        parts.push(`Friend: ${friendName} (${personalInfo.friend_contact})`);
-      }
-      
-      if (parts.length > 0) {
-        personalInfoText = '\n\nPERSONAL INFO:\n' + parts.join('\n');
-      }
+      personalInfoText = `\n\nPersonal Information:\nName: ${personalInfo.name || 'N/A'} ${personalInfo.surname || ''}\nAge: ${personalInfo.age || 'N/A'}\nGender: ${personalInfo.gender || 'N/A'}\nBlood Type: ${personalInfo.blood_type || 'N/A'}\nMedical Aid: ${personalInfo.medical_aid_name || 'N/A'} (${personalInfo.medical_aid_number || 'N/A'})\nHome Address: ${personalInfo.home_address || 'N/A'}\nVehicle: ${personalInfo.vehicle_brand || 'N/A'} ${personalInfo.vehicle_color || ''} (${personalInfo.vehicle_registration || 'N/A'})\nSpouse: ${personalInfo.spouse_name || 'N/A'} (${personalInfo.spouse_contact || 'N/A'})\nFriend: ${personalInfo.friend_name || 'N/A'} ${personalInfo.friend_surname || ''} (${personalInfo.friend_contact || 'N/A'})`;
     }
     
-    const fullMessage = `${message}\n\nLocation: ${locationUrl}${personalInfoText}`;
-
-    // Send SMS via Twilio edge function
-    try {
-      const phoneNumbers = contacts.map(c => c.phone);
-      
-      const { data, error } = await supabase.functions.invoke('send-sms-twilio', {
-        body: {
-          phoneNumbers,
-          message: fullMessage,
-        }
-      });
-
-      if (error) {
-        console.error('Failed to send SMS via Twilio:', error);
-        await Haptics.notification({ type: NotificationType.Error });
-        throw error;
-      }
-      
-      console.log(`SMS sent via Twilio to ${data.sent} contacts`);
-    } catch (error) {
-      console.error('Failed to send SMS via Twilio:', error);
-      await Haptics.notification({ type: NotificationType.Error });
-      throw error;
-    }
-
-    // Capture device and network information
-    let deviceInfo = null;
-    let networkInfo = null;
-    let wifiInfo = null;
-
-    try {
-      deviceInfo = await Device.getInfo();
-      networkInfo = await Network.getStatus();
-      
-      // Capture WiFi information if available
-      if (networkInfo.connectionType === 'wifi') {
-        wifiInfo = {
-          ssid: networkInfo.ssid || 'Unknown',
-          connected: networkInfo.connected
-        };
-      }
-    } catch (deviceError) {
-      console.error('Failed to capture device info:', deviceError);
-    }
-
-    // Start voice recording (2 minutes)
-    let audioTranscript = null;
-    let audioDurationSeconds = null;
+    const fullMessage = `${message}\n${locationUrl}${personalInfoText}`;
     
-    const voiceRecorder = new VoiceRecorder();
-
-    console.log('Starting 2-minute voice recording for emergency context...');
-    const recordingPromise = voiceRecorder.startRecording(120000) // 2 minutes
-      .then(async (audioBlob) => {
-        console.log('Voice recording completed, transcribing...');
-        audioDurationSeconds = 120; // 2 minutes
-
-        try {
-          // Convert audio to base64
-          const base64Audio = await blobToBase64(audioBlob);
-
-          // Send to transcription edge function
-          const { data: transcriptionData, error: transcriptionError } = await supabase.functions.invoke(
-            'transcribe-audio',
-            {
-              body: { audio: base64Audio }
-            }
-          );
-
-          if (transcriptionError) {
-            console.error('Transcription error:', transcriptionError);
-          } else if (transcriptionData?.text) {
-            audioTranscript = transcriptionData.text;
-            console.log('Transcription successful:', audioTranscript.substring(0, 100) + '...');
+    // Send SMS to all contacts
+    const results = await Promise.allSettled(
+      contacts.map(async (contact) => {
+        const response = await supabase.functions.invoke('send-sms-twilio', {
+          body: { 
+            to: contact.phone, 
+            message: fullMessage 
           }
-        } catch (transcriptionError) {
-          console.error('Failed to transcribe audio:', transcriptionError);
+        });
+        
+        if (response.error) {
+          console.error(`Error sending SMS to ${contact.name}:`, response.error);
+          throw new Error(`Failed to send to ${contact.name}`);
         }
+        
+        return contact;
       })
-      .catch((error) => {
-        console.error('Voice recording failed:', error);
+    );
+    
+    const successfulContacts = results
+      .filter(result => result.status === 'fulfilled')
+      .map(result => (result as PromiseFulfilledResult<any>).value);
+    
+    const failedCount = results.filter(result => result.status === 'rejected').length;
+    
+    if (failedCount > 0) {
+      console.warn(`${failedCount} messages failed to send`);
+    }
+    
+    // Background tasks: Start long-running processes without blocking the main flow
+    (async () => {
+      // Capture device and network information
+      const deviceInfo = await Device.getInfo();
+      const deviceId = await Device.getId();
+      const networkStatus = await Network.getStatus();
+
+      // Get IP address
+      let ipAddress = null;
+      try {
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipResponse.json();
+        ipAddress = ipData.ip;
+      } catch (error) {
+        console.error('Error getting IP address:', error);
+      }
+
+      // Upload enhanced SOS files to storage
+      let fileUrls = { audioUrl: '', photoUrls: [] as string[] };
+      try {
+        fileUrls = await uploadSOSFiles(userId!, userId!, enhancedData);
+        console.log('Files uploaded successfully:', fileUrls);
+      } catch (error) {
+        console.error('Error uploading SOS files:', error);
+      }
+
+      // Log SOS event to history with all captured data
+      const { data: sosHistoryData, error: sosHistoryError } = await supabase
+        .from('sos_history')
+        .insert([{
+          user_id: userId!,
+          latitude,
+          longitude,
+          message,
+          contacts_count: contacts.length,
+          contacted_recipients: successfulContacts.map(c => ({
+            name: c.name,
+            phone: c.phone,
+            timestamp: new Date().toISOString()
+          })),
+          device_model: `${deviceInfo.manufacturer} ${deviceInfo.model}`,
+          device_serial: deviceId.identifier,
+          ip_address: ipAddress,
+          network_isp: networkStatus.connectionType,
+          wifi_info: enhancedData.wifiInfo as any,
+          personal_info: personalInfo,
+          audio_duration_seconds: enhancedData.audioDuration,
+          audio_transcript: null // Will be updated after transcription
+        }])
+        .select()
+        .single();
+      
+      if (sosHistoryError) {
+        console.error('Error logging SOS history:', sosHistoryError);
+        return;
+      }
+
+      // Start live location tracking (1 minute)
+      console.log('Starting live location tracking (1 minute)...');
+      await startLocationTracking({
+        sosHistoryId: sosHistoryData.id,
+        userId: userId!,
+        durationMinutes: 1
       });
 
-    // Personal info already fetched earlier for SMS content
-
-    // Wait for voice recording to complete (run in background)
-    recordingPromise.finally(() => {
-      // Update the history with transcription if available
-      if (userId && (audioTranscript || audioDurationSeconds)) {
-        supabase.from('sos_history')
-          .update({
-            audio_transcript: audioTranscript,
-            audio_duration_seconds: audioDurationSeconds
-          })
-          .eq('user_id', userId)
-          .order('triggered_at', { ascending: false })
-          .limit(1)
-          .then(({ error }) => {
-            if (error) {
-              console.error('Failed to update audio transcription:', error);
-            } else {
-              console.log('Audio transcription saved to history');
-            }
-          });
-      }
-    });
-
-    // Log to history if user is authenticated
-    let sosHistoryId: string | null = null;
-    if (userId) {
-      try {
-        const { data: historyData, error: historyError } = await supabase.from('sos_history').insert({
-          user_id: userId,
+      // Send enhanced control room notification with all attachments
+      console.log('Sending enhanced control room notification with attachments...');
+      const trackingUrl = generateTrackingUrl(sosHistoryData.id);
+      
+      await supabase.functions.invoke('send-sos-notification', {
+        body: {
+          userId: userId!,
           message,
           latitude,
           longitude,
-          contacts_count: contacts.length,
-          contacted_recipients: contacts.map(c => ({ name: c.name, phone: c.phone })),
-          device_model: deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : null,
-          device_serial: deviceInfo?.identifier || null,
-          network_isp: networkInfo?.connectionType || null,
-          ip_address: null, // IP address not directly available from Capacitor
-          wifi_info: wifiInfo,
-          personal_info: personalInfo || {},
-          audio_transcript: null, // Will be updated when recording completes
-          audio_duration_seconds: null
-        }).select('id').single();
-
-        if (historyError) {
-          throw historyError;
+          deviceModel: `${deviceInfo.manufacturer} ${deviceInfo.model}`,
+          deviceSerial: deviceId.identifier,
+          ipAddress,
+          networkISP: networkStatus.connectionType,
+          wifiInfo: enhancedData.wifiFormatted,
+          personalInfo,
+          trackingUrl,
+          contactsNotified: successfulContacts.length,
+          audioUrl: fileUrls.audioUrl,
+          photoUrls: fileUrls.photoUrls,
+          audioDuration: enhancedData.audioDuration
         }
-
-        sosHistoryId = historyData?.id || null;
-
-        // Start 5-minute live location tracking
-        if (sosHistoryId) {
-          console.log('Starting 5-minute live location tracking...');
-          startLocationTracking({
-            sosHistoryId,
-            userId,
-            durationMinutes: 5
-          }).catch(error => {
-            console.error('Failed to start location tracking:', error);
-          });
-
-          // Generate live tracking URL
-          const trackingUrl = generateTrackingUrl(sosHistoryId);
-          console.log('Live tracking URL:', trackingUrl);
-
-          // Update SMS message with tracking link
-          const trackingMessage = `${fullMessage}\n\n🔴 LIVE TRACKING (5 min): ${trackingUrl}`;
-
-          // Resend SMS with tracking link
-          try {
-            const phoneNumbers = contacts.map(c => c.phone);
-            
-            await supabase.functions.invoke('send-sms-twilio', {
-              body: {
-                phoneNumbers,
-                message: trackingMessage,
-              }
-            });
-
-            console.log('Updated SMS with live tracking link sent');
-          } catch (smsError) {
-            console.error('Failed to send updated SMS with tracking:', smsError);
-          }
+      });
+      
+      // Transcribe audio in background and update history
+      console.log('Starting audio transcription...');
+      try {
+        const transcribeResponse = await supabase.functions.invoke('transcribe-audio', {
+          body: { audio: enhancedData.audioBase64 }
+        });
+        
+        const audioTranscript = transcribeResponse.data?.text || null;
+        console.log('Transcription complete:', audioTranscript ? 'Success' : 'No transcript');
+        
+        if (audioTranscript) {
+          await supabase
+            .from('sos_history')
+            .update({ audio_transcript: audioTranscript })
+            .eq('id', sosHistoryData.id);
         }
-
-        // Send notification email to control room (note: transcript will be sent separately when available)
-        try {
-          const trackingUrl = sosHistoryId ? generateTrackingUrl(sosHistoryId) : null;
-          
-          const { error: emailError } = await supabase.functions.invoke('send-sos-notification', {
-            body: {
-              userId,
-              message,
-              latitude,
-              longitude,
-              deviceModel: deviceInfo ? `${deviceInfo.manufacturer} ${deviceInfo.model}` : null,
-              deviceSerial: deviceInfo?.identifier || null,
-              networkIsp: networkInfo?.connectionType || null,
-              wifiInfo,
-              contactsCount: contacts.length,
-              personalInfo: personalInfo || null,
-              audioTranscript: null, // Will be available after 2 minutes
-              audioDurationSeconds: null,
-              liveTrackingUrl: trackingUrl
-            }
-          });
-
-          if (emailError) {
-            console.error('Failed to send email notification:', emailError);
-          } else {
-            console.log('Email notification sent to control room');
-          }
-        } catch (emailError) {
-          console.error('Error sending email notification:', emailError);
-          // Don't fail the SOS if email fails
-        }
-      } catch (historyError) {
-        console.error('Failed to log SOS history:', historyError);
-        // Don't fail the whole operation if logging fails
+      } catch (error) {
+        console.error('Error transcribing audio:', error);
       }
-    }
-
-    console.log('SOS messages sent successfully via Twilio');
-    
-    // Trigger success haptic
-    await Haptics.notification({ type: NotificationType.Success });
+      
+      // Success haptic
+      await Haptics.impact({ style: ImpactStyle.Heavy });
+    })();
 
     return true;
   } catch (error) {
-    console.error('Failed to send SOS:', error);
-    await Haptics.notification({ type: NotificationType.Error });
+    console.error('Error sending SOS messages:', error);
+    await Haptics.impact({ style: ImpactStyle.Heavy });
     throw error;
   }
 };

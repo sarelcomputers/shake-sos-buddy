@@ -3,7 +3,7 @@ export class VoiceRecorder {
   private audioChunks: Blob[] = [];
   private stream: MediaStream | null = null;
 
-  async startRecording(durationMs: number = 120000): Promise<Blob> {
+  async startRecording(durationMs: number = 15000): Promise<Blob> {
     try {
       // Request microphone permission
       this.stream = await navigator.mediaDevices.getUserMedia({ 

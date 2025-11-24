@@ -14,7 +14,7 @@ interface LocationTrackingOptions {
 export async function startLocationTracking({
   sosHistoryId,
   userId,
-  durationMinutes = 5
+  durationMinutes = 1
 }: LocationTrackingOptions): Promise<void> {
   const endTime = Date.now() + (durationMinutes * 60 * 1000);
   let watchId: string | null = null;
