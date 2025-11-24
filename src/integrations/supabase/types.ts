@@ -240,6 +240,7 @@ export type Database = {
           gender: string | null
           home_address: string | null
           id: string
+          id_number: string | null
           medical_aid_name: string | null
           medical_aid_number: string | null
           name: string | null
@@ -263,6 +264,7 @@ export type Database = {
           gender?: string | null
           home_address?: string | null
           id?: string
+          id_number?: string | null
           medical_aid_name?: string | null
           medical_aid_number?: string | null
           name?: string | null
@@ -286,6 +288,7 @@ export type Database = {
           gender?: string | null
           home_address?: string | null
           id?: string
+          id_number?: string | null
           medical_aid_name?: string | null
           medical_aid_number?: string | null
           name?: string | null
