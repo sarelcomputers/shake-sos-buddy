@@ -303,6 +303,7 @@ export type Database = {
           test_message: string
           updated_at: string
           user_id: string
+          voice_alert_enabled: boolean
         }
         Insert: {
           email_message?: string
@@ -313,6 +314,7 @@ export type Database = {
           test_message?: string
           updated_at?: string
           user_id: string
+          voice_alert_enabled?: boolean
         }
         Update: {
           email_message?: string
@@ -323,6 +325,7 @@ export type Database = {
           test_message?: string
           updated_at?: string
           user_id?: string
+          voice_alert_enabled?: boolean
         }
         Relationships: [
           {

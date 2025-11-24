@@ -23,6 +23,7 @@ export interface SOSSettings {
   testEmailMessage: string;
   sensitivity: number;
   shakeCount: number;
+  voiceAlertEnabled: boolean;
   contacts: Contact[];
   emailContacts: EmailContact[];
 }
@@ -35,6 +36,7 @@ const DEFAULT_SETTINGS: SOSSettings = {
   testEmailMessage: '[TEST] This is a test of your emergency email alert system. No action needed.',
   sensitivity: 15,
   shakeCount: 3,
+  voiceAlertEnabled: true,
   contacts: [],
   emailContacts: [],
 };
@@ -75,6 +77,7 @@ export const useSOSSettings = () => {
           testEmailMessage: data.test_email_message || DEFAULT_SETTINGS.testEmailMessage,
           sensitivity: parseInt(data.shake_sensitivity) || 15,
           shakeCount: 3,
+          voiceAlertEnabled: data.voice_alert_enabled ?? true,
         }));
       }
     } catch (error) {
@@ -139,6 +142,7 @@ export const useSOSSettings = () => {
           email_message: updated.emailMessage,
           test_email_message: updated.testEmailMessage,
           shake_sensitivity: updated.sensitivity.toString(),
+          voice_alert_enabled: updated.voiceAlertEnabled,
         })
         .eq('user_id', user.id);
 
@@ -175,6 +179,10 @@ export const useSOSSettings = () => {
 
   const updateShakeCount = (shakeCount: number) => {
     saveSettings({ shakeCount });
+  };
+
+  const updateVoiceAlertEnabled = (enabled: boolean) => {
+    saveSettings({ voiceAlertEnabled: enabled });
   };
 
   const addContact = async (contact: Omit<Contact, 'id'>) => {
@@ -289,6 +297,7 @@ export const useSOSSettings = () => {
     updateTestEmailMessage,
     updateSensitivity,
     updateShakeCount,
+    updateVoiceAlertEnabled,
     addContact,
     removeContact,
     addEmailContact,

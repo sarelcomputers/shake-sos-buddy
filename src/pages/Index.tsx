@@ -42,6 +42,7 @@ const Index = () => {
     updateTestEmailMessage,
     updateSensitivity,
     updateShakeCount,
+    updateVoiceAlertEnabled,
     addContact,
     removeContact,
     addEmailContact,
@@ -423,12 +424,14 @@ const Index = () => {
               testEmailMessage={settings.testEmailMessage}
               sensitivity={settings.sensitivity}
               shakeCount={settings.shakeCount}
+              voiceAlertEnabled={settings.voiceAlertEnabled}
               onMessageChange={updateMessage}
               onTestMessageChange={updateTestMessage}
               onEmailMessageChange={updateEmailMessage}
               onTestEmailMessageChange={updateTestEmailMessage}
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
+              onVoiceAlertEnabledChange={updateVoiceAlertEnabled}
             />
           </TabsContent>
 
