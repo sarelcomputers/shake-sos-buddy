@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
-import { MessageSquare, Gauge, Hash } from 'lucide-react';
+import { MessageSquare, Gauge, Hash, Volume2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
 interface SettingsPanelProps {
@@ -13,12 +14,14 @@ interface SettingsPanelProps {
   testEmailMessage: string;
   sensitivity: number;
   shakeCount: number;
+  voiceAlertEnabled: boolean;
   onMessageChange: (message: string) => void;
   onTestMessageChange: (message: string) => void;
   onEmailMessageChange: (message: string) => void;
   onTestEmailMessageChange: (message: string) => void;
   onSensitivityChange: (sensitivity: number) => void;
   onShakeCountChange: (count: number) => void;
+  onVoiceAlertEnabledChange: (enabled: boolean) => void;
 }
 
 export const SettingsPanel = ({
@@ -28,12 +31,14 @@ export const SettingsPanel = ({
   testEmailMessage,
   sensitivity,
   shakeCount,
+  voiceAlertEnabled,
   onMessageChange,
   onTestMessageChange,
   onEmailMessageChange,
   onTestEmailMessageChange,
   onSensitivityChange,
   onShakeCountChange,
+  onVoiceAlertEnabledChange,
 }: SettingsPanelProps) => {
   return (
     <div className="space-y-4">
@@ -161,6 +166,25 @@ export const SettingsPanel = ({
             />
             <p className="text-xs text-muted-foreground">
               Number of shakes needed to trigger the alert (2-10)
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-5 h-5 text-primary" />
+                <Label htmlFor="voiceAlert" className="text-base font-semibold">
+                  Voice Alert
+                </Label>
+              </div>
+              <Switch
+                id="voiceAlert"
+                checked={voiceAlertEnabled}
+                onCheckedChange={onVoiceAlertEnabledChange}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enable voice alert when SOS is triggered
             </p>
           </div>
         </Card>
