@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface WifiInfo {
+  currentNetwork: {
+    ssid: string;
+    connectionType: string;
+    connected: boolean;
+  };
+  nearbyNetworks: Array<{
+    ssid: string;
+    level?: number;
+    frequency?: number;
+  }>;
+  timestamp: number;
+}
+
 interface EmailRequest {
   to: string;
   name: string;
@@ -15,6 +29,7 @@ interface EmailRequest {
   trackingUrl?: string;
   personalInfo?: any;
   wifiNames?: string;
+  wifiInfo?: WifiInfo;
   photoUrl?: string;
 }
 
@@ -24,7 +39,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, name, subject, message, location, trackingUrl, personalInfo, wifiNames, photoUrl }: EmailRequest = await req.json();
+    const { to, name, subject, message, location, trackingUrl, personalInfo, wifiNames, wifiInfo, photoUrl }: EmailRequest = await req.json();
 
     console.log('Sending email to:', to);
 
@@ -129,10 +144,63 @@ serve(async (req) => {
       `;
     }
 
-    if (wifiNames) {
+    // Display WiFi information
+    if (wifiInfo && (wifiInfo.nearbyNetworks.length > 0 || wifiInfo.currentNetwork.ssid !== 'N/A')) {
       emailBody += `
           <div style="margin: 20px 0;">
-            <h3 style="color: #111827; margin-bottom: 10px;">📡 Nearby WiFi Networks</h3>
+            <h3 style="color: #111827; margin-bottom: 10px;">📡 WiFi Network Information</h3>
+            <div style="background-color: white; padding: 15px; border-radius: 6px;">
+      `;
+      
+      // Current network
+      if (wifiInfo.currentNetwork.ssid !== 'N/A' && wifiInfo.currentNetwork.connectionType === 'wifi') {
+        emailBody += `
+              <p style="margin: 5px 0;"><strong>Current Network:</strong> ${wifiInfo.currentNetwork.ssid} (Connected)</p>
+        `;
+      } else {
+        emailBody += `
+              <p style="margin: 5px 0;"><strong>Connection Type:</strong> ${wifiInfo.currentNetwork.connectionType}</p>
+        `;
+      }
+      
+      // Nearby networks
+      if (wifiInfo.nearbyNetworks.length > 0) {
+        emailBody += `
+              <p style="margin: 10px 0 5px 0;"><strong>Nearby WiFi Networks:</strong></p>
+              <ul style="margin: 5px 0; padding-left: 20px; color: #4b5563;">
+        `;
+        
+        wifiInfo.nearbyNetworks.forEach(network => {
+          const signalStrength = network.level 
+            ? network.level > -50 ? '🟢 Excellent' 
+              : network.level > -60 ? '🟡 Good' 
+              : network.level > -70 ? '🟠 Fair' 
+              : '🔴 Weak'
+            : '';
+          
+          emailBody += `
+                <li style="margin: 3px 0;">${network.ssid}${signalStrength ? ' - ' + signalStrength : ''}</li>
+          `;
+        });
+        
+        emailBody += `
+              </ul>
+        `;
+      } else {
+        emailBody += `
+              <p style="margin: 5px 0; color: #6b7280;">No nearby WiFi networks detected</p>
+        `;
+      }
+      
+      emailBody += `
+            </div>
+          </div>
+      `;
+    } else if (wifiNames) {
+      // Fallback to simple string if wifiInfo not provided
+      emailBody += `
+          <div style="margin: 20px 0;">
+            <h3 style="color: #111827; margin-bottom: 10px;">📡 WiFi Information</h3>
             <p style="color: #4b5563;">${wifiNames}</p>
           </div>
       `;

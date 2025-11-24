@@ -485,6 +485,7 @@ const Index = () => {
             location: locationUrl,
             trackingUrl,
             personalInfo: personalInfo || {},
+            wifiInfo: simplifiedData.wifiInfo,
             wifiNames: simplifiedData.wifiNames
           },
         });
