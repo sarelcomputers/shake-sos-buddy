@@ -156,35 +156,19 @@ serve(async (req) => {
       </html>
     `;
 
-    // Send email
-    const emailData = {
-      from: Deno.env.get('GMAIL_USER'),
-      to: 'appcontrolroom@alfa22.co.za',
-      subject: `🚨 SOS ALERT - ${profile.email} - ${timestamp}`,
-      html: htmlBody,
-    };
+    // Send email using Gmail SMTP
+    const emailTo = 'appcontrolroom@alfa22.co.za';
+    const emailSubject = `🚨 SOS ALERT - ${profile.email} - ${timestamp}`;
+    
+    const gmailUser = Deno.env.get('GMAIL_USER');
+    const gmailPassword = Deno.env.get('GMAIL_APP_PASSWORD');
 
-    console.log('Sending email to:', emailData.to);
-
-    const gmailResponse = await fetch('https://api.smtp2go.com/v3/email/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        api_key: Deno.env.get('GMAIL_APP_PASSWORD'),
-        sender: Deno.env.get('GMAIL_USER'),
-        to: [emailData.to],
-        subject: emailData.subject,
-        html_body: htmlBody,
-      }),
-    });
-
-    if (!gmailResponse.ok) {
-      const errorText = await gmailResponse.text();
-      console.error('Gmail API error:', errorText);
-      throw new Error('Failed to send email');
+    if (!gmailUser || !gmailPassword) {
+      throw new Error('Gmail credentials not configured');
     }
+
+    console.log('Sending email to:', emailTo);
+    await sendViaGmailSMTP(gmailUser, gmailPassword, emailTo, emailSubject, htmlBody);
 
     console.log('Email sent successfully');
 
@@ -201,3 +185,77 @@ serve(async (req) => {
     );
   }
 });
+
+async function sendViaGmailSMTP(
+  user: string,
+  password: string,
+  to: string,
+  subject: string,
+  html: string
+): Promise<void> {
+  console.log('Sending email via Gmail SMTP to:', to);
+
+  const conn = await Deno.connect({
+    hostname: "smtp.gmail.com",
+    port: 587,
+  });
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  async function readResponse(): Promise<string> {
+    const buffer = new Uint8Array(1024);
+    const n = await conn.read(buffer);
+    if (n === null) throw new Error("Connection closed");
+    return decoder.decode(buffer.subarray(0, n));
+  }
+
+  async function sendCommand(command: string): Promise<string> {
+    await conn.write(encoder.encode(command + "\r\n"));
+    return await readResponse();
+  }
+
+  try {
+    await readResponse();
+    await sendCommand("EHLO localhost");
+    await sendCommand("STARTTLS");
+
+    const tlsConn = await Deno.startTls(conn, {
+      hostname: "smtp.gmail.com",
+    });
+
+    async function sendTlsCommand(command: string): Promise<string> {
+      await tlsConn.write(encoder.encode(command + "\r\n"));
+      const buffer = new Uint8Array(1024);
+      const n = await tlsConn.read(buffer);
+      if (n === null) throw new Error("Connection closed");
+      return decoder.decode(buffer.subarray(0, n));
+    }
+
+    await sendTlsCommand("EHLO localhost");
+    await sendTlsCommand("AUTH LOGIN");
+    await sendTlsCommand(btoa(user));
+    await sendTlsCommand(btoa(password));
+    await sendTlsCommand(`MAIL FROM:<${user}>`);
+    await sendTlsCommand(`RCPT TO:<${to}>`);
+    await sendTlsCommand("DATA");
+
+    const emailContent = [
+      `From: Alfa22 SOS <${user}>`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/html; charset=UTF-8",
+      "",
+      html,
+      ".",
+    ].join("\r\n");
+
+    await sendTlsCommand(emailContent);
+    await sendTlsCommand("QUIT");
+    tlsConn.close();
+  } catch (error) {
+    console.error("SMTP Error:", error);
+    throw error;
+  }
+}
