@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { publicSupabase } from '@/integrations/supabase/publicClient';
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, Activity } from 'lucide-react';
+import { MapPin, Clock, Activity, AlertCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 interface LocationPoint {
@@ -49,9 +49,14 @@ export default function LiveTracking() {
   const [sosData, setSOSData] = useState<SOSData | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!sosId) return;
+    if (!sosId) {
+      setError('Invalid tracking link');
+      setLoading(false);
+      return;
+    }
 
     let channel: any;
     let interval: any;
@@ -61,7 +66,7 @@ export default function LiveTracking() {
       try {
         console.log('LiveTracking: Fetching data for SOS ID:', sosId);
         
-        const { data: sos, error: sosError } = await supabase
+        const { data: sos, error: sosError } = await publicSupabase
           .from('sos_history')
           .select('*')
           .eq('id', sosId)
@@ -69,28 +74,34 @@ export default function LiveTracking() {
 
         if (sosError) {
           console.error('Error fetching SOS data:', sosError);
+          setError('Failed to load emergency alert data');
           setLoading(false);
           return;
         }
 
-        if (sos) {
-          console.log('LiveTracking: SOS data found:', sos);
-          setSOSData(sos);
-          
-          // Set up activity check based on fetched data
-          const sosTime = new Date(sos.triggered_at).getTime();
-          const now = Date.now();
-          const fiveMinutes = 5 * 60 * 1000;
-          setIsActive(now - sosTime < fiveMinutes);
-
-          // Update active status every 10 seconds
-          interval = setInterval(() => {
-            const currentTime = Date.now();
-            setIsActive(currentTime - sosTime < fiveMinutes);
-          }, 10000);
+        if (!sos) {
+          console.log('LiveTracking: No SOS data found');
+          setError('Emergency alert not found');
+          setLoading(false);
+          return;
         }
 
-        const { data: locs, error: locsError } = await supabase
+        console.log('LiveTracking: SOS data found:', sos);
+        setSOSData(sos);
+        
+        // Set up activity check based on fetched data
+        const sosTime = new Date(sos.triggered_at).getTime();
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+        setIsActive(now - sosTime < fiveMinutes);
+
+        // Update active status every 10 seconds
+        interval = setInterval(() => {
+          const currentTime = Date.now();
+          setIsActive(currentTime - sosTime < fiveMinutes);
+        }, 10000);
+
+        const { data: locs, error: locsError } = await publicSupabase
           .from('location_tracking')
           .select('*')
           .eq('sos_history_id', sosId)
@@ -102,9 +113,11 @@ export default function LiveTracking() {
           console.log('LiveTracking: Locations found:', locs?.length || 0);
           setLocations(locs || []);
         }
+        
+        setLoading(false);
       } catch (error) {
         console.error('Error in fetchData:', error);
-      } finally {
+        setError('An unexpected error occurred');
         setLoading(false);
       }
     };
@@ -113,7 +126,7 @@ export default function LiveTracking() {
 
     // Subscribe to real-time location updates
     console.log('LiveTracking: Setting up realtime subscription for SOS ID:', sosId);
-    channel = supabase
+    channel = publicSupabase
       .channel(`location-tracking-${sosId}`)
       .on(
         'postgres_changes',
@@ -135,7 +148,7 @@ export default function LiveTracking() {
     return () => {
       console.log('LiveTracking: Cleaning up subscriptions');
       if (interval) clearInterval(interval);
-      if (channel) supabase.removeChannel(channel);
+      if (channel) publicSupabase.removeChannel(channel);
     };
   }, [sosId]);
 
@@ -152,13 +165,22 @@ export default function LiveTracking() {
     );
   }
 
-  if (!sosData) {
+  if (error || !sosData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="p-8 text-center">
-          <MapPin className="w-12 h-12 mx-auto mb-4 text-destructive" />
-          <h2 className="text-xl font-semibold mb-2">SOS Alert Not Found</h2>
-          <p className="text-muted-foreground">This emergency alert could not be found or may have been deleted.</p>
+        <Card className="p-8 text-center max-w-md">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
+          <h2 className="text-xl font-semibold mb-2">
+            {error || 'Emergency Alert Not Found'}
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {error 
+              ? 'There was a problem loading the tracking information.' 
+              : 'This emergency alert could not be found or may have been deleted.'}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Please verify the tracking link or contact support if the problem persists.
+          </p>
         </Card>
       </div>
     );
