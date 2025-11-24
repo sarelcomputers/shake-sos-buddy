@@ -12,6 +12,8 @@ interface SettingsPanelProps {
   testMessage: string;
   emailMessage: string;
   testEmailMessage: string;
+  whatsappMessage: string;
+  testWhatsAppMessage: string;
   sensitivity: number;
   shakeCount: number;
   voiceAlertEnabled: boolean;
@@ -22,6 +24,8 @@ interface SettingsPanelProps {
   onTestMessageChange: (message: string) => void;
   onEmailMessageChange: (message: string) => void;
   onTestEmailMessageChange: (message: string) => void;
+  onWhatsAppMessageChange: (message: string) => void;
+  onTestWhatsAppMessageChange: (message: string) => void;
   onSensitivityChange: (sensitivity: number) => void;
   onShakeCountChange: (count: number) => void;
   onVoiceAlertEnabledChange: (enabled: boolean) => void;
@@ -35,6 +39,8 @@ export const SettingsPanel = ({
   testMessage,
   emailMessage,
   testEmailMessage,
+  whatsappMessage,
+  testWhatsAppMessage,
   sensitivity,
   shakeCount,
   voiceAlertEnabled,
@@ -45,6 +51,8 @@ export const SettingsPanel = ({
   onTestMessageChange,
   onEmailMessageChange,
   onTestEmailMessageChange,
+  onWhatsAppMessageChange,
+  onTestWhatsAppMessageChange,
   onSensitivityChange,
   onShakeCountChange,
   onVoiceAlertEnabledChange,
@@ -204,6 +212,44 @@ export const SettingsPanel = ({
             />
             <p className="text-xs text-muted-foreground">
               This message will be sent when you test an email contact
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              <Label htmlFor="whatsappMessage" className="text-base font-semibold">
+                Emergency Message (WhatsApp)
+              </Label>
+            </div>
+            <Textarea
+              id="whatsappMessage"
+              value={whatsappMessage}
+              onChange={(e) => onWhatsAppMessageChange(e.target.value)}
+              placeholder="Enter your emergency WhatsApp message..."
+              className="min-h-[100px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              This message will be sent via WhatsApp with your location
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary" />
+              <Label htmlFor="testWhatsAppMessage" className="text-base font-semibold">
+                Test Message (WhatsApp)
+              </Label>
+            </div>
+            <Textarea
+              id="testWhatsAppMessage"
+              value={testWhatsAppMessage}
+              onChange={(e) => onTestWhatsAppMessageChange(e.target.value)}
+              placeholder="Enter your test WhatsApp message..."
+              className="min-h-[100px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              This message will be sent when you test a WhatsApp contact
             </p>
           </div>
 

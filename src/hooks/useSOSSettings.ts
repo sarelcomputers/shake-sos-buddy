@@ -15,12 +15,21 @@ export interface EmailContact {
   email: string;
 }
 
+export interface WhatsAppContact {
+  id: string;
+  name: string;
+  phone: string;
+  is_group?: boolean;
+}
+
 export interface SOSSettings {
   enabled: boolean;
   message: string;
   testMessage: string;
   emailMessage: string;
   testEmailMessage: string;
+  whatsappMessage: string;
+  testWhatsAppMessage: string;
   sensitivity: number;
   shakeCount: number;
   voiceAlertEnabled: boolean;
@@ -29,6 +38,7 @@ export interface SOSSettings {
   cooldownPeriod: number; // in seconds
   contacts: Contact[];
   emailContacts: EmailContact[];
+  whatsappContacts: WhatsAppContact[];
 }
 
 const DEFAULT_SETTINGS: SOSSettings = {
@@ -37,6 +47,8 @@ const DEFAULT_SETTINGS: SOSSettings = {
   testMessage: '[TEST] This is a test of your emergency alert system. No action needed.',
   emailMessage: 'EMERGENCY ALERT! I need immediate help at this location.',
   testEmailMessage: '[TEST] This is a test of your emergency email alert system. No action needed.',
+  whatsappMessage: 'EMERGENCY! I need help at this location:',
+  testWhatsAppMessage: '[TEST] This is a test of your emergency WhatsApp alert system. No action needed.',
   sensitivity: 15,
   shakeCount: 5,
   voiceAlertEnabled: true,
@@ -45,6 +57,7 @@ const DEFAULT_SETTINGS: SOSSettings = {
   cooldownPeriod: 120, // 2 minutes default
   contacts: [],
   emailContacts: [],
+  whatsappContacts: [],
 };
 
 export const useSOSSettings = () => {
@@ -57,6 +70,7 @@ export const useSOSSettings = () => {
       fetchSettings();
       fetchContacts();
       fetchEmailContacts();
+      fetchWhatsAppContacts();
     } else {
       setLoading(false);
     }
@@ -81,6 +95,8 @@ export const useSOSSettings = () => {
           testMessage: data.test_message || DEFAULT_SETTINGS.testMessage,
           emailMessage: data.email_message || DEFAULT_SETTINGS.emailMessage,
           testEmailMessage: data.test_email_message || DEFAULT_SETTINGS.testEmailMessage,
+          whatsappMessage: data.message,
+          testWhatsAppMessage: data.test_whatsapp_message || DEFAULT_SETTINGS.testWhatsAppMessage,
           sensitivity: parseInt(data.shake_sensitivity) || 15,
           shakeCount: 5,
           voiceAlertEnabled: data.voice_alert_enabled ?? true,
@@ -135,6 +151,26 @@ export const useSOSSettings = () => {
     }
   };
 
+  const fetchWhatsAppContacts = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('emergency_whatsapp')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setSettings(prev => ({
+        ...prev,
+        whatsappContacts: data || [],
+      }));
+    } catch (error) {
+      console.error('Error fetching WhatsApp contacts:', error);
+    }
+  };
+
   const saveSettings = async (newSettings: Partial<SOSSettings>) => {
     if (!user) return;
 
@@ -149,6 +185,7 @@ export const useSOSSettings = () => {
           test_message: updated.testMessage,
           email_message: updated.emailMessage,
           test_email_message: updated.testEmailMessage,
+          test_whatsapp_message: updated.testWhatsAppMessage,
           shake_sensitivity: updated.sensitivity.toString(),
           voice_alert_enabled: updated.voiceAlertEnabled,
           voice_password: updated.voicePassword,
@@ -181,6 +218,14 @@ export const useSOSSettings = () => {
 
   const updateTestEmailMessage = (testEmailMessage: string) => {
     saveSettings({ testEmailMessage });
+  };
+
+  const updateWhatsAppMessage = (whatsappMessage: string) => {
+    saveSettings({ whatsappMessage });
+  };
+
+  const updateTestWhatsAppMessage = (testWhatsAppMessage: string) => {
+    saveSettings({ testWhatsAppMessage });
   };
 
   const updateSensitivity = (sensitivity: number) => {
@@ -309,6 +354,58 @@ export const useSOSSettings = () => {
     }
   };
 
+  const addWhatsAppContact = async (contact: Omit<WhatsAppContact, 'id'>) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('emergency_whatsapp')
+        .insert([{
+          user_id: user.id,
+          name: contact.name,
+          phone: contact.phone,
+          is_group: contact.is_group || false,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSettings(prev => ({
+        ...prev,
+        whatsappContacts: [...prev.whatsappContacts, data],
+      }));
+
+      toast.success('WhatsApp contact added successfully');
+    } catch (error: any) {
+      console.error('Error adding WhatsApp contact:', error);
+      toast.error(error.message || 'Failed to add WhatsApp contact');
+    }
+  };
+
+  const removeWhatsAppContact = async (id: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('emergency_whatsapp')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSettings(prev => ({
+        ...prev,
+        whatsappContacts: prev.whatsappContacts.filter(c => c.id !== id),
+      }));
+
+      toast.success('WhatsApp contact deleted');
+    } catch (error: any) {
+      console.error('Error deleting WhatsApp contact:', error);
+      toast.error('Failed to delete WhatsApp contact');
+    }
+  };
+
   return {
     settings,
     loading,
@@ -317,6 +414,8 @@ export const useSOSSettings = () => {
     updateTestMessage,
     updateEmailMessage,
     updateTestEmailMessage,
+    updateWhatsAppMessage,
+    updateTestWhatsAppMessage,
     updateSensitivity,
     updateShakeCount,
     updateVoiceAlertEnabled,
@@ -327,5 +426,7 @@ export const useSOSSettings = () => {
     removeContact,
     addEmailContact,
     removeEmailContact,
+    addWhatsAppContact,
+    removeWhatsAppContact,
   };
 };
