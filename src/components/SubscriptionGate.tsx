@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 const PAYFAST_MERCHANT_ID = import.meta.env.VITE_PAYFAST_MERCHANT_ID || '10000100';
 const PAYFAST_MERCHANT_KEY = import.meta.env.VITE_PAYFAST_MERCHANT_KEY || '46f0cd694581a';
-const PAYFAST_URL = import.meta.env.VITE_PAYFAST_URL || 'https://sandbox.payfast.co.za/eng/process';
+const PAYFAST_URL = import.meta.env.VITE_PAYFAST_URL || 'https://www.payfast.co.za/eng/process';
 
 export const SubscriptionGate = () => {
   const { subscription, loading, hasAccess } = useSubscription();

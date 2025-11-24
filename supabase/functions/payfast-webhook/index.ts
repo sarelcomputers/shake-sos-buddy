@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { corsHeaders } from '../_shared/cors.ts'
 
-const PAYFAST_HOST = Deno.env.get('TESTING_MODE') === 'true' 
-  ? 'https://sandbox.payfast.co.za'
-  : 'https://www.payfast.co.za'
+const PAYFAST_HOST = 'https://www.payfast.co.za'
 
 // PayFast valid IP addresses
 const PAYFAST_IPS = [
@@ -37,12 +35,6 @@ const PAYFAST_IPS = [
 
 function isValidPayFastIP(ip: string | null): boolean {
   if (!ip) return false;
-  
-  // In testing mode, allow all IPs
-  if (Deno.env.get('TESTING_MODE') === 'true') {
-    console.log('Testing mode: Allowing all IPs');
-    return true;
-  }
   
   // Extract IP if it contains port
   const cleanIP = ip.split(':')[0];
