@@ -4,6 +4,9 @@ export interface WifiNetwork {
   ssid: string;
   signalStrength: string;
   connected: boolean;
+  bssid?: string;
+  frequency?: number;
+  level?: number;
 }
 
 export interface NetworkInfo {
@@ -14,6 +17,7 @@ export interface NetworkInfo {
   };
   nearbyNetworks: WifiNetwork[];
   timestamp: number;
+  limitedScan: boolean;
 }
 
 export async function scanWifiNetworks(): Promise<NetworkInfo> {
@@ -22,27 +26,31 @@ export async function scanWifiNetworks(): Promise<NetworkInfo> {
     
     console.log('Network status:', status);
 
-    // Note: Full WiFi scanning with SSID and signal strength of nearby networks
-    // requires native plugins and special permissions on both iOS and Android.
-    // This provides basic network info that's available through Capacitor.
-    
     const networkInfo: NetworkInfo = {
       currentNetwork: {
-        ssid: 'N/A', // Not available in web/basic Capacitor API
+        ssid: 'N/A',
         connectionType: status.connectionType,
         connected: status.connected,
       },
       nearbyNetworks: [],
       timestamp: Date.now(),
+      limitedScan: true, // Indicates this is a limited scan
     };
 
-    // If on WiFi, we know at least one network
+    // Basic network info - Capacitor's Network API has limited capabilities
+    // Full WiFi scanning requires native plugins with location permissions
     if (status.connectionType === 'wifi' && status.connected) {
+      // We can at least detect that we're on WiFi
       networkInfo.nearbyNetworks.push({
-        ssid: 'Connected Network',
-        signalStrength: 'Unknown (Connected)',
+        ssid: 'Connected WiFi Network',
+        signalStrength: 'Active Connection',
         connected: true,
       });
+      networkInfo.currentNetwork.ssid = 'Connected WiFi Network';
+    } else if (status.connectionType === 'cellular') {
+      networkInfo.currentNetwork.ssid = 'Cellular Network';
+    } else if (status.connectionType === 'none') {
+      networkInfo.currentNetwork.ssid = 'No Connection';
     }
 
     return networkInfo;
@@ -56,28 +64,31 @@ export async function scanWifiNetworks(): Promise<NetworkInfo> {
       },
       nearbyNetworks: [],
       timestamp: Date.now(),
+      limitedScan: true,
     };
   }
 }
 
 export function formatWifiInfo(networkInfo: NetworkInfo): string {
-  let formatted = `Network Scan (${new Date(networkInfo.timestamp).toLocaleString()})\n\n`;
+  let formatted = `Network Information (${new Date(networkInfo.timestamp).toLocaleString()})\n\n`;
   
-  formatted += `Current Connection:\n`;
-  formatted += `- Type: ${networkInfo.currentNetwork.connectionType}\n`;
+  formatted += `Connection Status:\n`;
+  formatted += `- Type: ${networkInfo.currentNetwork.connectionType.toUpperCase()}\n`;
   formatted += `- Connected: ${networkInfo.currentNetwork.connected ? 'Yes' : 'No'}\n`;
-  formatted += `- SSID: ${networkInfo.currentNetwork.ssid}\n\n`;
+  formatted += `- Network: ${networkInfo.currentNetwork.ssid}\n\n`;
   
   if (networkInfo.nearbyNetworks.length > 0) {
-    formatted += `Nearby Networks:\n`;
+    formatted += `Detected Networks (${networkInfo.nearbyNetworks.length}):\n`;
     networkInfo.nearbyNetworks.forEach((network, index) => {
       formatted += `${index + 1}. ${network.ssid}\n`;
       formatted += `   Signal: ${network.signalStrength}\n`;
-      formatted += `   Status: ${network.connected ? 'Connected' : 'Available'}\n`;
+      if (network.bssid) formatted += `   BSSID: ${network.bssid}\n`;
+      if (network.frequency) formatted += `   Frequency: ${network.frequency} MHz\n`;
+      formatted += `   Status: ${network.connected ? '✓ Connected' : 'Available'}\n`;
     });
   } else {
-    formatted += `No nearby networks detected\n`;
-    formatted += `(Note: Full WiFi scanning requires additional permissions)\n`;
+    formatted += `Note: Detailed WiFi scanning is limited in web/mobile environments\n`;
+    formatted += `Only basic connection information is available\n`;
   }
   
   return formatted;

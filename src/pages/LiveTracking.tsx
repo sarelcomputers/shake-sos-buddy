@@ -145,13 +145,26 @@ export default function LiveTracking() {
     );
   }
 
-  if (!sosData || locations.length === 0) {
+  if (!sosData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="p-8 text-center">
-          <MapPin className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-xl font-semibold mb-2">No Location Data</h2>
-          <p className="text-muted-foreground">Waiting for location updates...</p>
+          <MapPin className="w-12 h-12 mx-auto mb-4 text-destructive" />
+          <h2 className="text-xl font-semibold mb-2">SOS Alert Not Found</h2>
+          <p className="text-muted-foreground">This emergency alert could not be found or may have been deleted.</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (locations.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="p-8 text-center">
+          <Activity className="w-12 h-12 mx-auto mb-4 text-primary animate-pulse" />
+          <h2 className="text-xl font-semibold mb-2">Waiting for Location Data</h2>
+          <p className="text-muted-foreground mb-4">Location tracking is starting up...</p>
+          <p className="text-sm text-muted-foreground">Alert triggered: {new Date(sosData.triggered_at).toLocaleString()}</p>
         </Card>
       </div>
     );
