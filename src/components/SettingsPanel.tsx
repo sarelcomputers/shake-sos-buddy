@@ -17,6 +17,7 @@ interface SettingsPanelProps {
   voiceAlertEnabled: boolean;
   voicePassword: string;
   smsTriggerEnabled: boolean;
+  cooldownPeriod: number;
   onMessageChange: (message: string) => void;
   onTestMessageChange: (message: string) => void;
   onEmailMessageChange: (message: string) => void;
@@ -26,6 +27,7 @@ interface SettingsPanelProps {
   onVoiceAlertEnabledChange: (enabled: boolean) => void;
   onVoicePasswordChange: (password: string) => void;
   onSmsTriggerEnabledChange: (enabled: boolean) => void;
+  onCooldownPeriodChange: (period: number) => void;
 }
 
 export const SettingsPanel = ({
@@ -38,6 +40,7 @@ export const SettingsPanel = ({
   voiceAlertEnabled,
   voicePassword,
   smsTriggerEnabled,
+  cooldownPeriod,
   onMessageChange,
   onTestMessageChange,
   onEmailMessageChange,
@@ -47,6 +50,7 @@ export const SettingsPanel = ({
   onVoiceAlertEnabledChange,
   onVoicePasswordChange,
   onSmsTriggerEnabledChange,
+  onCooldownPeriodChange,
 }: SettingsPanelProps) => {
   return (
     <div className="space-y-4">
@@ -244,6 +248,31 @@ export const SettingsPanel = ({
             />
             <p className="text-xs text-muted-foreground">
               Number of shakes needed to trigger the alert (2-10)
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              <Label htmlFor="cooldownPeriod" className="text-base font-semibold">
+                Alert Cooldown: {cooldownPeriod}s
+              </Label>
+            </div>
+            <Slider
+              id="cooldownPeriod"
+              value={[cooldownPeriod]}
+              onValueChange={([value]) => onCooldownPeriodChange(value)}
+              min={0}
+              max={300}
+              step={15}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>No cooldown</span>
+              <span>5 minutes</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Waiting period after an alert before the next one can trigger (0 = no cooldown)
             </p>
           </div>
 

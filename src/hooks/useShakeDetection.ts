@@ -10,6 +10,7 @@ interface ShakeDetectionOptions {
   resetTime: number;
   onShake: () => void;
   enabled: boolean;
+  cooldownPeriod: number; // in milliseconds
 }
 
 export const useShakeDetection = ({
@@ -18,12 +19,12 @@ export const useShakeDetection = ({
   resetTime,
   onShake,
   enabled,
+  cooldownPeriod,
 }: ShakeDetectionOptions) => {
   const [shakeCount, setShakeCount] = useState(0);
   const lastShakeTime = useRef<number>(0);
   const lastTriggerTime = useRef<number>(0);
   const resetTimeout = useRef<NodeJS.Timeout | null>(null);
-  const COOLDOWN_PERIOD = 2 * 60 * 1000; // 2 minutes in milliseconds
 
   useEffect(() => {
     if (!enabled) {
@@ -84,13 +85,15 @@ export const useShakeDetection = ({
           console.error('Error checking cooldown:', error);
         }
         
-        // Check if we're still in shake cooldown period
-        const timeSinceLastTrigger = now - lastTriggerTime.current;
-        const inCooldown = lastTriggerTime.current > 0 && timeSinceLastTrigger < COOLDOWN_PERIOD;
-        
-        if (inCooldown) {
-          console.log(`Shake detected but in cooldown. ${Math.ceil((COOLDOWN_PERIOD - timeSinceLastTrigger) / 1000)}s remaining`);
-          return; // Ignore shakes during cooldown
+        // Check if we're still in shake cooldown period (if cooldown is enabled)
+        if (cooldownPeriod > 0) {
+          const timeSinceLastTrigger = now - lastTriggerTime.current;
+          const inCooldown = lastTriggerTime.current > 0 && timeSinceLastTrigger < cooldownPeriod;
+          
+          if (inCooldown) {
+            console.log(`Shake detected but in cooldown. ${Math.ceil((cooldownPeriod - timeSinceLastTrigger) / 1000)}s remaining`);
+            return; // Ignore shakes during cooldown
+          }
         }
         
         if (resetTimeout.current) {
@@ -133,7 +136,7 @@ export const useShakeDetection = ({
       // Allow device to sleep when hook unmounts
       KeepAwake.allowSleep().catch(console.error);
     };
-  }, [threshold, requiredShakes, resetTime, onShake, enabled]);
+  }, [threshold, requiredShakes, resetTime, onShake, enabled, cooldownPeriod]);
 
   return { shakeCount };
 };
