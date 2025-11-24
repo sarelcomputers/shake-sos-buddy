@@ -10,7 +10,6 @@ import Index from "./pages/Index";
 import History from "./pages/History";
 import Subscription from "./pages/Subscription";
 import Admin from "./pages/Admin";
-import ControlRoom from "./pages/ControlRoom";
 import Auth from "./pages/Auth";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -64,11 +63,6 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute>
                 <Admin />
-              </ProtectedRoute>
-            } />
-            <Route path="/control-room" element={
-              <ProtectedRoute>
-                <ControlRoom />
               </ProtectedRoute>
             } />
             <Route path="/privacy" element={<PrivacyPolicy />} />

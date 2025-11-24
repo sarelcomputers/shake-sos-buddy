@@ -165,26 +165,6 @@ export const sendSOSMessages = async (
       })
       .eq('id', sosHistoryData.id);
     
-    // Send notification to control room
-    console.log('Sending control room notification...');
-    await supabase.functions.invoke('send-sos-notification', {
-      body: {
-        userId: userId!,
-        message,
-        latitude,
-        longitude,
-        deviceModel: `${deviceInfo.manufacturer} ${deviceInfo.model}`,
-        deviceSerial: deviceId.identifier,
-        ipAddress,
-        networkISP: networkStatus.connectionType,
-        wifiNames: simplifiedData.wifiNames,
-        personalInfo,
-        trackingUrl,
-        photoUrl,
-        contactsNotified: successfulContacts.length,
-      }
-    });
-    
     // Get emergency email contacts and send emails
     const { data: emailContacts } = await supabase
       .from('emergency_emails')
