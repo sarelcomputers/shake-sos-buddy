@@ -55,27 +55,39 @@ export default function LiveTracking() {
 
     // Fetch SOS data and initial locations
     const fetchData = async () => {
-      const { data: sos } = await supabase
-        .from('sos_history')
-        .select('*')
-        .eq('id', sosId)
-        .single();
+      try {
+        const { data: sos, error: sosError } = await supabase
+          .from('sos_history')
+          .select('*')
+          .eq('id', sosId)
+          .single();
 
-      if (sos) {
-        setSOSData(sos);
+        if (sosError) {
+          console.error('Error fetching SOS data:', sosError);
+        }
+
+        if (sos) {
+          setSOSData(sos);
+        }
+
+        const { data: locs, error: locsError } = await supabase
+          .from('location_tracking')
+          .select('*')
+          .eq('sos_history_id', sosId)
+          .order('timestamp', { ascending: true });
+
+        if (locsError) {
+          console.error('Error fetching locations:', locsError);
+        }
+
+        if (locs) {
+          setLocations(locs);
+        }
+      } catch (error) {
+        console.error('Error in fetchData:', error);
+      } finally {
+        setLoading(false);
       }
-
-      const { data: locs } = await supabase
-        .from('location_tracking')
-        .select('*')
-        .eq('sos_history_id', sosId)
-        .order('timestamp', { ascending: true });
-
-      if (locs) {
-        setLocations(locs);
-      }
-
-      setLoading(false);
     };
 
     fetchData();
