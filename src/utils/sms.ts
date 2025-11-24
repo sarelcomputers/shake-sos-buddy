@@ -191,6 +191,24 @@ export const sendSOSMessages = async (
         })
       );
     }
+
+    // Get emergency WhatsApp contacts and send WhatsApp messages
+    const { data: whatsappContacts } = await supabase
+      .from('emergency_whatsapp')
+      .select('*')
+      .eq('user_id', userId!);
+    
+    if (whatsappContacts && whatsappContacts.length > 0) {
+      console.log('Sending WhatsApp messages to emergency contacts...');
+      const whatsappPhones = whatsappContacts.map(c => c.phone);
+      
+      await supabase.functions.invoke('send-whatsapp-twilio', {
+        body: {
+          phoneNumbers: whatsappPhones,
+          message: fullMessage
+        }
+      });
+    }
     
     // Success haptic
     await Haptics.impact({ style: ImpactStyle.Heavy });

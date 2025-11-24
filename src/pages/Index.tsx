@@ -7,11 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SOSStatus } from '@/components/SOSStatus';
 import { ContactList } from '@/components/ContactList';
 import { EmailContactList, type EmailContact } from '@/components/EmailContactList';
+import { WhatsAppContactList, type WhatsAppContact } from '@/components/WhatsAppContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { PersonalInformation } from '@/components/PersonalInformation';
 import { AddContactDialog } from '@/components/AddContactDialog';
 import { AddEmailContactDialog } from '@/components/AddEmailContactDialog';
+import { AddWhatsAppContactDialog } from '@/components/AddWhatsAppContactDialog';
 import { PermissionsSetup } from '@/components/PermissionsSetup';
 import { SubscriptionGate } from '@/components/SubscriptionGate';
 import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
@@ -42,6 +44,8 @@ const Index = () => {
     updateTestMessage,
     updateEmailMessage,
     updateTestEmailMessage,
+    updateWhatsAppMessage,
+    updateTestWhatsAppMessage,
     updateSensitivity,
     updateShakeCount,
     updateVoiceAlertEnabled,
@@ -52,10 +56,13 @@ const Index = () => {
     removeContact,
     addEmailContact,
     removeEmailContact,
+    addWhatsAppContact,
+    removeWhatsAppContact,
   } = useSOSSettings();
 
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddEmailContact, setShowAddEmailContact] = useState(false);
+  const [showAddWhatsAppContact, setShowAddWhatsAppContact] = useState(false);
   const [permissionsComplete, setPermissionsComplete] = useState(false);
 
   useEffect(() => {
@@ -313,6 +320,27 @@ const Index = () => {
       toast({
         title: "Test Failed",
         description: "Could not send test email. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTestWhatsApp = async (contact: WhatsAppContact) => {
+    try {
+      await supabase.functions.invoke('send-whatsapp-twilio', {
+        body: {
+          phoneNumbers: [contact.phone],
+          message: settings.testWhatsAppMessage
+        }
+      });
+      toast({
+        title: "Test WhatsApp Sent!",
+        description: `Test WhatsApp message sent to ${contact.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Could not send test WhatsApp message. Please try again.",
         variant: "destructive",
       });
     }
@@ -633,6 +661,12 @@ const Index = () => {
               onAdd={() => setShowAddEmailContact(true)}
               onTest={handleTestEmail}
             />
+            <WhatsAppContactList
+              contacts={settings.whatsappContacts}
+              onRemove={removeWhatsAppContact}
+              onAdd={() => setShowAddWhatsAppContact(true)}
+              onTest={handleTestWhatsApp}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 mt-6">
@@ -641,6 +675,8 @@ const Index = () => {
               testMessage={settings.testMessage}
               emailMessage={settings.emailMessage}
               testEmailMessage={settings.testEmailMessage}
+              whatsappMessage={settings.whatsappMessage}
+              testWhatsAppMessage={settings.testWhatsAppMessage}
               sensitivity={settings.sensitivity}
               shakeCount={settings.shakeCount}
               voiceAlertEnabled={settings.voiceAlertEnabled}
@@ -651,6 +687,8 @@ const Index = () => {
               onTestMessageChange={updateTestMessage}
               onEmailMessageChange={updateEmailMessage}
               onTestEmailMessageChange={updateTestEmailMessage}
+              onWhatsAppMessageChange={updateWhatsAppMessage}
+              onTestWhatsAppMessageChange={updateTestWhatsAppMessage}
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
               onVoiceAlertEnabledChange={updateVoiceAlertEnabled}
@@ -693,6 +731,12 @@ const Index = () => {
         open={showAddEmailContact}
         onOpenChange={setShowAddEmailContact}
         onAdd={addEmailContact}
+      />
+
+      <AddWhatsAppContactDialog
+        open={showAddWhatsAppContact}
+        onOpenChange={setShowAddWhatsAppContact}
+        onAdd={addWhatsAppContact}
       />
     </div>
   );

@@ -102,6 +102,41 @@ export type Database = {
           },
         ]
       }
+      emergency_whatsapp: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_group: boolean | null
+          name: string
+          phone: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_group?: boolean | null
+          name: string
+          phone: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_group?: boolean | null
+          name?: string
+          phone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_whatsapp_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       location_tracking: {
         Row: {
           accuracy: number | null
@@ -332,6 +367,7 @@ export type Database = {
           sms_trigger_enabled: boolean
           test_email_message: string
           test_message: string
+          test_whatsapp_message: string | null
           updated_at: string
           user_id: string
           voice_alert_enabled: boolean
@@ -345,6 +381,7 @@ export type Database = {
           sms_trigger_enabled?: boolean
           test_email_message?: string
           test_message?: string
+          test_whatsapp_message?: string | null
           updated_at?: string
           user_id: string
           voice_alert_enabled?: boolean
@@ -358,6 +395,7 @@ export type Database = {
           sms_trigger_enabled?: boolean
           test_email_message?: string
           test_message?: string
+          test_whatsapp_message?: string | null
           updated_at?: string
           user_id?: string
           voice_alert_enabled?: boolean
