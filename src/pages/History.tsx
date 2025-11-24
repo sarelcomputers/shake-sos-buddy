@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, MapPin, Users, ArrowLeft, Map, List, Download, Smartphone } from 'lucide-react';
+import { Clock, MapPin, Users, ArrowLeft, Map, List, Download, Smartphone, Share2, Mail } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapView } from '@/components/MapView';
-import { ClusterMapView } from '@/components/ClusterMapView';
+import { GoogleMapView } from '@/components/GoogleMapView';
+import { GoogleClusterMapView } from '@/components/GoogleClusterMapView';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 import jsPDF from 'jspdf';
+import alfa22Logo from '@/assets/alfa22-logo.png';
 
 type SOSHistoryRow = Tables<'sos_history'>;
 
@@ -73,21 +74,84 @@ const History = () => {
     });
   };
 
+  const generateReportText = () => {
+    let report = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    report += '      ALFA22 SOS HISTORY REPORT\n';
+    report += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    report += `Generated: ${new Date().toLocaleString()}\n`;
+    report += `Total Alerts: ${history.length}\n\n`;
+
+    history.forEach((entry, index) => {
+      report += `━━ Alert #${index + 1} ━━━━━━━━━━━━━━━━━━━\n`;
+      report += `Date: ${formatDate(entry.triggered_at)}\n`;
+      report += `Location: ${entry.latitude.toFixed(6)}, ${entry.longitude.toFixed(6)}\n`;
+      report += `Message: ${entry.message}\n`;
+      report += `Contacts Notified: ${entry.contacts_count}\n`;
+      
+      if (entry.device_model) {
+        report += `Device: ${entry.device_model}\n`;
+      }
+      
+      if (entry.contacted_recipients && entry.contacted_recipients.length > 0) {
+        report += '\nRecipients:\n';
+        entry.contacted_recipients.forEach((recipient) => {
+          report += `  • ${recipient.name} (${recipient.phone})\n`;
+        });
+      }
+      
+      report += '\n';
+    });
+
+    return report;
+  };
+
+  const shareViaWhatsApp = () => {
+    const reportText = generateReportText();
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(reportText)}`;
+    window.open(whatsappUrl, '_blank');
+    
+    toast({
+      title: 'Opening WhatsApp',
+      description: 'Report ready to share',
+    });
+  };
+
+  const shareViaEmail = () => {
+    const reportText = generateReportText();
+    const subject = `Alfa22 SOS History Report - ${new Date().toLocaleDateString()}`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportText)}`;
+    window.location.href = mailtoUrl;
+    
+    toast({
+      title: 'Opening Email',
+      description: 'Report ready to send',
+    });
+  };
+
   const exportToPDF = () => {
     const doc = new jsPDF();
-    let yPosition = 20;
+    let yPosition = 30;
+
+    // Add logo
+    const img = new Image();
+    img.src = alfa22Logo;
+    doc.addImage(img, 'PNG', 20, 10, 30, 15);
 
     // Title
     doc.setFontSize(18);
-    doc.text('Alfa22 SOS History Report', 20, yPosition);
-    yPosition += 10;
-
+    doc.setFont('helvetica', 'bold');
+    doc.text('ALFA22 SOS History Report', 55, 20);
+    
     // Metadata
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, yPosition);
-    yPosition += 5;
-    doc.text(`Total Alerts: ${history.length}`, 20, yPosition);
-    yPosition += 15;
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 55, 26);
+    doc.text(`Total Alerts: ${history.length}`, 55, 31);
+    
+    // Line separator
+    doc.setDrawColor(220, 220, 220);
+    doc.line(20, 35, 190, 35);
+    yPosition = 45;
 
     // History entries
     history.forEach((entry, index) => {
@@ -197,13 +261,31 @@ const History = () => {
           </div>
           <div className="flex items-center gap-3">
             <Button
+              onClick={shareViaWhatsApp}
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={history.length === 0}
+            >
+              <Share2 className="w-4 h-4" />
+              WhatsApp
+            </Button>
+            <Button
+              onClick={shareViaEmail}
+              variant="outline"
+              className="flex items-center gap-2"
+              disabled={history.length === 0}
+            >
+              <Mail className="w-4 h-4" />
+              Email
+            </Button>
+            <Button
               onClick={exportToPDF}
               variant="outline"
               className="flex items-center gap-2"
               disabled={history.length === 0}
             >
               <Download className="w-4 h-4" />
-              Export PDF
+              PDF
             </Button>
             <Badge variant="outline" className="text-lg px-4 py-2">
               {history.length} {history.length === 1 ? 'Alert' : 'Alerts'}
@@ -296,7 +378,7 @@ const History = () => {
                     </CardHeader>
                     <CardContent className="p-0 h-[calc(100%-4rem)]">
                       {selectedEntry ? (
-                        <MapView
+                        <GoogleMapView
                           key={selectedEntry.id}
                           latitude={selectedEntry.latitude}
                           longitude={selectedEntry.longitude}
@@ -328,7 +410,7 @@ const History = () => {
                   </p>
                 </CardHeader>
                 <CardContent className="p-0 h-[calc(100%-8rem)]">
-                  <ClusterMapView
+                  <GoogleClusterMapView
                     locations={history.map(entry => ({
                       id: entry.id,
                       latitude: entry.latitude,

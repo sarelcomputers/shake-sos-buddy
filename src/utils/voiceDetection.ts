@@ -15,6 +15,7 @@ class VoiceDetection {
   private onPasswordDetected: (() => void) | null = null;
   private onConfirmation: ((confirmed: boolean) => void) | null = null;
   private synth: SpeechSynthesis | null = null;
+  private voicesLoaded = false;
 
   constructor() {
     // Check if browser supports Web Speech API
@@ -25,6 +26,7 @@ class VoiceDetection {
       this.recognition.continuous = true;
       this.recognition.interimResults = false;
       this.recognition.lang = 'en-US';
+      this.recognition.maxAlternatives = 1;
       this.setupRecognitionHandlers();
     } else {
       console.warn('Web Speech API not supported in this browser');
@@ -33,6 +35,23 @@ class VoiceDetection {
     // Initialize speech synthesis
     if ('speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
+      
+      // Load voices
+      const loadVoices = () => {
+        const voices = this.synth?.getVoices() || [];
+        if (voices.length > 0) {
+          this.voicesLoaded = true;
+          console.log('Voices loaded:', voices.length);
+        }
+      };
+
+      // Try to load voices immediately
+      loadVoices();
+
+      // Also listen for voiceschanged event (needed on some browsers)
+      if (this.synth) {
+        this.synth.onvoiceschanged = loadVoices;
+      }
     }
   }
 
@@ -124,36 +143,59 @@ class VoiceDetection {
     // Cancel any ongoing speech
     this.synth.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Use a female voice if available
-    const voices = this.synth.getVoices();
-    const femaleVoice = voices.find(voice => 
-      voice.name.toLowerCase().includes('female') || 
-      voice.name.toLowerCase().includes('woman') ||
-      voice.name.toLowerCase().includes('samantha') ||
-      voice.name.toLowerCase().includes('victoria')
-    ) || voices.find(voice => voice.lang === 'en-US');
-    
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
+    // Wait for voices to load if not already loaded
+    const speakWhenReady = () => {
+      const voices = this.synth!.getVoices();
+      console.log('Available voices:', voices.length);
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Use a female voice if available - try multiple options
+      const femaleVoice = voices.find(voice => 
+        voice.name.toLowerCase().includes('samantha') ||
+        voice.name.toLowerCase().includes('victoria') ||
+        voice.name.toLowerCase().includes('zira') ||
+        voice.name.toLowerCase().includes('susan') ||
+        voice.name.toLowerCase().includes('karen') ||
+        (voice.name.toLowerCase().includes('female') && voice.lang.startsWith('en')) ||
+        (voice.name.toLowerCase().includes('woman') && voice.lang.startsWith('en'))
+      ) || voices.find(voice => voice.lang.startsWith('en-US')) || voices[0];
+      
+      if (femaleVoice) {
+        console.log('Using voice:', femaleVoice.name);
+        utterance.voice = femaleVoice;
+      }
+      
+      utterance.rate = 1.0;
+      utterance.pitch = 1.2;
+      utterance.volume = 1.0;
+      utterance.lang = 'en-US';
+
+      utterance.onstart = () => {
+        console.log('Speech started');
+      };
+
+      utterance.onend = () => {
+        console.log('Speech completed');
+        onComplete?.();
+      };
+
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event);
+        onComplete?.();
+      };
+
+      console.log('Speaking:', text);
+      this.synth!.speak(utterance);
+    };
+
+    // If voices are loaded, speak immediately
+    if (this.voicesLoaded) {
+      speakWhenReady();
+    } else {
+      // Wait a bit for voices to load
+      setTimeout(speakWhenReady, 100);
     }
-    
-    utterance.rate = 1.0;
-    utterance.pitch = 1.2;
-    utterance.volume = 1.0;
-
-    utterance.onend = () => {
-      console.log('Prompt spoken');
-      onComplete?.();
-    };
-
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      onComplete?.();
-    };
-
-    this.synth.speak(utterance);
   }
 
   start(options: VoiceDetectionOptions) {

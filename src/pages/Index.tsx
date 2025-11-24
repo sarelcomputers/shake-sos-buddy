@@ -154,21 +154,27 @@ const Index = () => {
     
     // Handle voice detection
     if (willBeEnabled && settings.voiceAlertEnabled && settings.voicePassword) {
+      console.log('Starting voice detection with password:', settings.voicePassword);
       voiceDetection.start({
         password: settings.voicePassword,
         onPasswordDetected: () => {
-          console.log('Voice password detected, awaiting confirmation...');
+          console.log('Voice password detected! Asking for confirmation...');
           toast({
-            title: "Voice Detected",
+            title: "Voice Password Detected",
             description: "Say 'yes' to trigger alert or 'no' to cancel",
           });
         },
         onConfirmation: async (confirmed) => {
+          console.log('Voice confirmation received:', confirmed);
           if (confirmed) {
-            console.log('User confirmed SOS via voice');
+            console.log('User confirmed "yes" - triggering SOS alert...');
+            toast({
+              title: "Voice Confirmed",
+              description: "Triggering emergency alert...",
+            });
             await handleSOS();
           } else {
-            console.log('User cancelled SOS via voice');
+            console.log('User said "no" - cancelling alert');
             toast({
               title: "Alert Cancelled",
               description: "Voice alert was cancelled",
@@ -176,7 +182,8 @@ const Index = () => {
           }
         },
       });
-    } else {
+    } else if (!willBeEnabled) {
+      console.log('Stopping voice detection');
       voiceDetection.stop();
     }
     
