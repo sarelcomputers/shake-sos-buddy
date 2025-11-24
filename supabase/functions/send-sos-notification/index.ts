@@ -11,13 +11,17 @@ interface SOSNotificationRequest {
   message: string;
   latitude: number;
   longitude: number;
-  deviceModel: string | null;
-  deviceSerial: string | null;
-  networkIsp: string | null;
-  wifiInfo: { ssid: string; connected: boolean } | null;
-  contactsCount: number;
+  deviceModel?: string;
+  deviceSerial?: string;
+  ipAddress?: string;
+  networkISP?: string;
+  wifiInfo?: any;
   personalInfo?: any;
-  liveTrackingUrl?: string | null;
+  trackingUrl?: string;
+  contactsNotified?: number;
+  audioUrl?: string;
+  photoUrls?: string[];
+  audioDuration?: number;
 }
 
 serve(async (req) => {
@@ -31,14 +35,31 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const data: SOSNotificationRequest = await req.json();
-    console.log('Received SOS notification request:', data);
+    const {
+      userId,
+      message,
+      latitude,
+      longitude,
+      deviceModel,
+      deviceSerial,
+      ipAddress,
+      networkISP,
+      wifiInfo,
+      personalInfo,
+      trackingUrl,
+      contactsNotified,
+      audioUrl,
+      photoUrls,
+      audioDuration
+    }: SOSNotificationRequest = await req.json();
+
+    console.log('Received enhanced SOS notification request with attachments');
 
     // Fetch user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('email')
-      .eq('id', data.userId)
+      .eq('id', userId)
       .single();
 
     if (profileError) {
@@ -46,198 +67,128 @@ serve(async (req) => {
       throw new Error('Failed to fetch user profile');
     }
 
-    const locationUrl = `https://maps.google.com/?q=${data.latitude},${data.longitude}`;
+    const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
     const timestamp = new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' });
 
     // Build personal info section
-    const personalInfoSection = data.personalInfo ? `
-      <div class="section">
-        <h3>Personal Information</h3>
-        ${data.personalInfo.photo_url ? `
-        <div style="text-align: center; margin-bottom: 15px;">
-          <img src="${data.personalInfo.photo_url}" alt="Profile Photo" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #dc2626;" />
+    let personalInfoSection = '';
+    if (personalInfo) {
+      personalInfoSection = `
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+          <h3 style="color: #333; margin-top: 0;">👤 Personal Information</h3>
+          ${personalInfo.photo_url ? `
+          <div style="text-align: center; margin-bottom: 15px;">
+            <img src="${personalInfo.photo_url}" alt="Profile Photo" style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #dc2626;" />
+          </div>
+          ` : ''}
+          ${personalInfo.name ? `<p style="color: #666; margin: 5px 0;"><strong>Name:</strong> ${personalInfo.name} ${personalInfo.surname || ''}</p>` : ''}
+          ${personalInfo.age ? `<p style="color: #666; margin: 5px 0;"><strong>Age:</strong> ${personalInfo.age}</p>` : ''}
+          ${personalInfo.gender ? `<p style="color: #666; margin: 5px 0;"><strong>Gender:</strong> ${personalInfo.gender}</p>` : ''}
+          ${personalInfo.blood_type ? `<p style="color: #666; margin: 5px 0;"><strong>Blood Type:</strong> ${personalInfo.blood_type}</p>` : ''}
+          ${personalInfo.medical_aid_name ? `<p style="color: #666; margin: 5px 0;"><strong>Medical Aid:</strong> ${personalInfo.medical_aid_name}${personalInfo.medical_aid_number ? ` (${personalInfo.medical_aid_number})` : ''}</p>` : ''}
+          ${personalInfo.home_address ? `<p style="color: #666; margin: 5px 0;"><strong>Home Address:</strong> ${personalInfo.home_address}</p>` : ''}
+          ${personalInfo.spouse_name ? `<p style="color: #666; margin: 5px 0;"><strong>Spouse:</strong> ${personalInfo.spouse_name}${personalInfo.spouse_contact ? ` (${personalInfo.spouse_contact})` : ''}</p>` : ''}
+          ${personalInfo.friend_name ? `<p style="color: #666; margin: 5px 0;"><strong>Friend:</strong> ${personalInfo.friend_name} ${personalInfo.friend_surname || ''}${personalInfo.friend_contact ? ` (${personalInfo.friend_contact})` : ''}</p>` : ''}
+          ${personalInfo.vehicle_registration ? `<p style="color: #666; margin: 5px 0;"><strong>Vehicle:</strong> ${personalInfo.vehicle_brand || ''} ${personalInfo.vehicle_color || ''} (${personalInfo.vehicle_registration})</p>` : ''}
         </div>
-        ` : ''}
-        ${data.personalInfo.name ? `
-        <div class="info-row">
-          <span class="label">Name:</span>
-          <span class="value">${data.personalInfo.name} ${data.personalInfo.surname || ''}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.age ? `
-        <div class="info-row">
-          <span class="label">Age:</span>
-          <span class="value">${data.personalInfo.age}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.gender ? `
-        <div class="info-row">
-          <span class="label">Gender:</span>
-          <span class="value">${data.personalInfo.gender}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.blood_type ? `
-        <div class="info-row">
-          <span class="label">Blood Type:</span>
-          <span class="value">${data.personalInfo.blood_type}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.medical_aid_name ? `
-        <div class="info-row">
-          <span class="label">Medical Aid:</span>
-          <span class="value">${data.personalInfo.medical_aid_name}${data.personalInfo.medical_aid_number ? ` (${data.personalInfo.medical_aid_number})` : ''}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.home_address ? `
-        <div class="info-row">
-          <span class="label">Home Address:</span>
-          <span class="value">${data.personalInfo.home_address}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.spouse_name ? `
-        <div class="info-row">
-          <span class="label">Spouse:</span>
-          <span class="value">${data.personalInfo.spouse_name}${data.personalInfo.spouse_contact ? ` - ${data.personalInfo.spouse_contact}` : ''}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.friend_name ? `
-        <div class="info-row">
-          <span class="label">Friend:</span>
-          <span class="value">${data.personalInfo.friend_name} ${data.personalInfo.friend_surname || ''}${data.personalInfo.friend_contact ? ` - ${data.personalInfo.friend_contact}` : ''}</span>
-        </div>
-        ` : ''}
-        ${data.personalInfo.vehicle_registration ? `
-        <div class="info-row">
-          <span class="label">Vehicle:</span>
-          <span class="value">${data.personalInfo.vehicle_brand || ''} ${data.personalInfo.vehicle_color || ''} - ${data.personalInfo.vehicle_registration}</span>
-        </div>
-        ` : ''}
-      </div>
-    ` : '';
+      `;
+    }
 
-    // Create HTML email
+    // Create HTML email with enhanced attachments
     const htmlBody = `
       <!DOCTYPE html>
       <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #dc2626; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background-color: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
-            .section { margin-bottom: 20px; background: white; padding: 15px; border-radius: 6px; }
-            .section h3 { margin-top: 0; color: #dc2626; border-bottom: 2px solid #dc2626; padding-bottom: 8px; }
-            .info-row { display: flex; margin-bottom: 8px; }
-            .label { font-weight: bold; min-width: 150px; color: #555; }
-            .value { color: #000; }
-            .location-btn { display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px; }
-            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f3f4f6; margin: 0; padding: 20px; }
+            .container { max-width: 700px; margin: 0 auto; background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .content { padding: 30px; }
+            h3 { color: #dc2626; margin-top: 0; border-bottom: 2px solid #dc2626; padding-bottom: 8px; }
+            .btn { display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 5px; }
+            .alert-box { background-color: #fee2e2; border-left: 4px solid #dc2626; padding: 15px; margin: 15px 0; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1>🚨 SOS ALERT TRIGGERED</h1>
-              <p style="margin: 0;">Emergency assistance requested</p>
+              <h1>🚨 ENHANCED SOS ALERT</h1>
+              <p style="margin: 5px 0 0 0; font-size: 16px;">Emergency assistance requested</p>
             </div>
             <div class="content">
-              <div class="section">
-                <h3>Alert Information</h3>
-                <div class="info-row">
-                  <span class="label">Timestamp:</span>
-                  <span class="value">${timestamp}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">Message:</span>
-                  <span class="value">${data.message}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">Contacts Notified:</span>
-                  <span class="value">${data.contactsCount}</span>
+              <div class="alert-box">
+                <strong>⚠️ IMMEDIATE ATTENTION REQUIRED</strong>
+                <p style="margin: 5px 0 0 0;">This is an enhanced SOS alert with audio recording, photos, and location tracking.</p>
+              </div>
+
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <h3 style="color: #333; margin-top: 0;">📍 Alert Information</h3>
+                <p style="color: #666; margin: 5px 0;"><strong>Timestamp:</strong> ${timestamp}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>Message:</strong> ${message}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>User:</strong> ${profile.email}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>Contacts Notified:</strong> ${contactsNotified || 0}</p>
+                <p style="color: #666; margin: 5px 0;"><strong>Location:</strong> ${latitude}, ${longitude}</p>
+                <div style="text-align: center; margin-top: 15px;">
+                  <a href="${locationUrl}" class="btn">📍 View on Google Maps</a>
+                  ${trackingUrl ? `<a href="${trackingUrl}" class="btn" style="background-color: #991b1b;">🔴 Live Tracking (1 min)</a>` : ''}
                 </div>
               </div>
 
-              <div class="section">
-                <h3>User Details</h3>
-                <div class="info-row">
-                  <span class="label">Email:</span>
-                  <span class="value">${profile.email}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">User ID:</span>
-                  <span class="value">${data.userId}</span>
-                </div>
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <h3 style="color: #333; margin-top: 0;">📱 Device Information</h3>
+                <p style="color: #666; margin: 0;"><strong>Model:</strong> ${deviceModel || 'Unknown'}</p>
+                <p style="color: #666; margin: 0;"><strong>Serial:</strong> ${deviceSerial || 'Unknown'}</p>
+                <p style="color: #666; margin: 0;"><strong>IP Address:</strong> ${ipAddress || 'Unknown'}</p>
+                <p style="color: #666; margin: 0;"><strong>Network ISP:</strong> ${networkISP || 'Unknown'}</p>
               </div>
+              
+              ${audioUrl ? `
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <h3 style="color: #333; margin-top: 0;">🎤 Audio Recording</h3>
+                <p style="color: #666; margin: 0;"><strong>Duration:</strong> ${audioDuration || 15} seconds</p>
+                <p style="color: #666; margin: 5px 0 0 0;"><a href="${audioUrl}" style="color: #dc2626; text-decoration: none;">Download Audio Recording</a></p>
+              </div>
+              ` : ''}
+              
+              ${photoUrls && photoUrls.length > 0 ? `
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <h3 style="color: #333; margin-top: 0;">📸 Camera Captures (${photoUrls.length} photos)</h3>
+                ${photoUrls.map((url, i) => `
+                  <p style="color: #666; margin: 5px 0;"><a href="${url}" style="color: #dc2626; text-decoration: none;">Photo ${i + 1}</a></p>
+                `).join('')}
+              </div>
+              ` : ''}
+              
+              ${wifiInfo ? `
+              <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <h3 style="color: #333; margin-top: 0;">📡 Network Information</h3>
+                <pre style="color: #666; margin: 0; white-space: pre-wrap; font-family: monospace; font-size: 12px;">${typeof wifiInfo === 'string' ? wifiInfo : JSON.stringify(wifiInfo, null, 2)}</pre>
+              </div>
+              ` : ''}
 
               ${personalInfoSection}
-
-              <div class="section">
-                <h3>Device Information</h3>
-                <div class="info-row">
-                  <span class="label">Device Model:</span>
-                  <span class="value">${data.deviceModel || 'Not available'}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">Device Serial:</span>
-                  <span class="value">${data.deviceSerial || 'Not available'}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">Network ISP:</span>
-                  <span class="value">${data.networkIsp || 'Not available'}</span>
-                </div>
-                ${data.wifiInfo ? `
-                <div class="info-row">
-                  <span class="label">WiFi SSID:</span>
-                  <span class="value">${data.wifiInfo.ssid}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">WiFi Connected:</span>
-                  <span class="value">${data.wifiInfo.connected ? 'Yes' : 'No'}</span>
-                </div>
-                ` : ''}
+              
+              <div style="text-align: center; margin-top: 30px; padding: 20px; background-color: #fef2f2; border-radius: 8px;">
+                <p style="margin: 0; color: #991b1b; font-weight: bold;">⚠️ This is an automated emergency alert</p>
+                <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Please respond immediately</p>
               </div>
-
-              <div class="section">
-                <h3>Location Information</h3>
-                <div class="info-row">
-                  <span class="label">Latitude:</span>
-                  <span class="value">${data.latitude}</span>
-                </div>
-                <div class="info-row">
-                  <span class="label">Longitude:</span>
-                  <span class="value">${data.longitude}</span>
-                </div>
-                <div style="text-align: center; margin-top: 15px;">
-                  <a href="${locationUrl}" class="location-btn">View Location on Map</a>
-                </div>
-                ${data.liveTrackingUrl ? `
-                <div style="text-align: center; margin-top: 15px; padding: 15px; background: #fef2f2; border-radius: 6px;">
-                  <p style="margin: 0 0 10px 0; color: #dc2626; font-weight: bold;">🔴 LIVE TRACKING ACTIVE (5 minutes)</p>
-                  <a href="${data.liveTrackingUrl}" class="location-btn" style="background-color: #991b1b;">View Live Tracking</a>
-                </div>
-                ` : ''}
-              </div>
-            </div>
-            <div class="footer">
-              <p>This is an automated alert from Alfa22 SOS System</p>
-              <p>Please respond immediately to this emergency</p>
             </div>
           </div>
         </body>
       </html>
     `;
 
-    // Send email using Gmail SMTP
+    // Send email
     const emailData = {
       from: Deno.env.get('GMAIL_USER'),
       to: 'appcontrolroom@alfa22.co.za',
-      subject: `🚨 SOS ALERT - ${profile.email} - ${timestamp}`,
+      subject: `🚨 ENHANCED SOS ALERT - ${profile.email} - ${timestamp}`,
       html: htmlBody,
     };
 
-    console.log('Sending email to:', emailData.to);
+    console.log('Sending enhanced email to:', emailData.to);
 
-    // Use Gmail SMTP API
     const gmailResponse = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
@@ -255,18 +206,13 @@ serve(async (req) => {
     if (!gmailResponse.ok) {
       const errorText = await gmailResponse.text();
       console.error('Gmail API error:', errorText);
-      
-      // Fallback to nodemailer-style SMTP
-      const smtpResponse = await sendViaGmailSMTP(emailData);
-      if (!smtpResponse.success) {
-        throw new Error('Failed to send email via SMTP');
-      }
+      throw new Error('Failed to send email');
     }
 
-    console.log('Email sent successfully');
+    console.log('Enhanced email sent successfully');
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Notification sent' }),
+      JSON.stringify({ success: true, message: 'Enhanced notification sent with attachments' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
@@ -278,48 +224,3 @@ serve(async (req) => {
     );
   }
 });
-
-async function sendViaGmailSMTP(emailData: any) {
-  try {
-    // Using Gmail SMTP directly with Deno's SMTPClient
-    const encoder = new TextEncoder();
-    
-    // Connect to Gmail SMTP
-    const conn = await Deno.connect({
-      hostname: 'smtp.gmail.com',
-      port: 587,
-    });
-
-    // Simple SMTP protocol implementation
-    const commands = [
-      `EHLO localhost\r\n`,
-      `AUTH LOGIN\r\n`,
-      btoa(Deno.env.get('GMAIL_USER') || '') + '\r\n',
-      btoa(Deno.env.get('GMAIL_APP_PASSWORD') || '') + '\r\n',
-      `MAIL FROM:<${emailData.from}>\r\n`,
-      `RCPT TO:<${emailData.to}>\r\n`,
-      `DATA\r\n`,
-      `From: ${emailData.from}\r\n`,
-      `To: ${emailData.to}\r\n`,
-      `Subject: ${emailData.subject}\r\n`,
-      `Content-Type: text/html; charset=UTF-8\r\n`,
-      `\r\n`,
-      `${emailData.html}\r\n`,
-      `.\r\n`,
-      `QUIT\r\n`,
-    ];
-
-    for (const cmd of commands) {
-      await conn.write(encoder.encode(cmd));
-      // Wait a bit for response
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    conn.close();
-    return { success: true };
-  } catch (error) {
-    console.error('SMTP error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown SMTP error';
-    return { success: false, error: errorMessage };
-  }
-}
