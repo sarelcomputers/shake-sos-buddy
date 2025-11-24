@@ -177,6 +177,18 @@ class VoiceDetection {
 
       utterance.onend = () => {
         console.log('Speech completed');
+
+        // After speaking the confirmation prompt, make sure we are
+        // actively listening for the user's "yes" or "no" response.
+        if (this.isListening && this.isAwaitingConfirmation && this.recognition) {
+          try {
+            this.recognition.start();
+            console.log('Resumed listening for confirmation');
+          } catch (e) {
+            console.error('Failed to resume recognition after speech:', e);
+          }
+        }
+
         onComplete?.();
       };
 
