@@ -1,6 +1,8 @@
 // Voice detection utility for SOS activation
 // Uses Web Speech API for continuous listening
 
+import { Capacitor } from '@capacitor/core';
+
 interface VoiceDetectionOptions {
   password: string;
   onPasswordDetected: () => void;
@@ -137,6 +139,93 @@ class VoiceDetection {
   }
 
   private speak(text: string, onComplete?: () => void) {
+    const isNative = Capacitor.isNativePlatform();
+    
+    console.log(`🔊 Speaking: "${text}" (Platform: ${isNative ? 'Native' : 'Web'})`);
+
+    // For mobile, use enhanced web speech with better settings
+    if (isNative) {
+      this.speakMobile(text, onComplete);
+    } else {
+      this.speakWeb(text, onComplete);
+    }
+  }
+
+  private speakMobile(text: string, onComplete?: () => void) {
+    if (!this.synth) {
+      console.warn('Speech synthesis not supported');
+      onComplete?.();
+      return;
+    }
+
+    console.log('🎤 Using mobile-optimized speech synthesis');
+
+    // Cancel any ongoing speech
+    this.synth.cancel();
+
+    // Wait a bit to ensure cancellation completed
+    setTimeout(() => {
+      const voices = this.synth!.getVoices();
+      console.log('📱 Available mobile voices:', voices.length);
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // For mobile, find the best English voice
+      const mobileVoice = voices.find(voice => 
+        voice.lang.startsWith('en') && 
+        (voice.localService || voice.default)
+      ) || voices.find(voice => voice.lang.startsWith('en')) || voices[0];
+      
+      if (mobileVoice) {
+        console.log('Using mobile voice:', mobileVoice.name, mobileVoice.lang);
+        utterance.voice = mobileVoice;
+      }
+      
+      // Mobile-optimized settings
+      utterance.rate = 0.9;  // Slightly slower for clarity
+      utterance.pitch = 1.1;
+      utterance.volume = 1.0;
+      utterance.lang = 'en-US';
+
+      utterance.onstart = () => {
+        console.log('✅ Mobile speech started');
+      };
+
+      utterance.onend = () => {
+        console.log('✅ Mobile speech completed');
+
+        // After speaking, resume listening for yes/no
+        setTimeout(() => {
+          if (this.isListening && this.isAwaitingConfirmation && this.recognition) {
+            try {
+              this.recognition.start();
+              console.log('Resumed listening for confirmation');
+            } catch (e) {
+              console.error('Failed to resume recognition after speech:', e);
+            }
+          }
+        }, 300); // Small delay to ensure speech is fully complete
+
+        onComplete?.();
+      };
+
+      utterance.onerror = (event) => {
+        console.error('❌ Mobile speech synthesis error:', event);
+        onComplete?.();
+      };
+
+      console.log('📢 Speaking on mobile:', text);
+      
+      // Ensure speech synthesis is not paused
+      if (this.synth.paused) {
+        this.synth.resume();
+      }
+      
+      this.synth!.speak(utterance);
+    }, 100);
+  }
+
+  private speakWeb(text: string, onComplete?: () => void) {
     if (!this.synth) {
       console.warn('Speech synthesis not supported');
       onComplete?.();
