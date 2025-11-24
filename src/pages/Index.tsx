@@ -377,6 +377,7 @@ const Index = () => {
     // Import simplified SOS utilities
     const { captureSimplifiedSOSData } = await import('@/utils/enhancedSOS');
     const { startLocationTracking, generateTrackingUrl } = await import('@/utils/locationTracking');
+    const { cameraCapture } = await import('@/utils/cameraCapture');
     const { Device } = await import('@capacitor/device');
     const { Network } = await import('@capacitor/network');
     const { Geolocation } = await import('@capacitor/geolocation');
@@ -394,10 +395,21 @@ const Index = () => {
         .eq('user_id', userId)
         .single();
 
-      console.log('🚨 SOS TRIGGERED - Capturing WiFi data...');
+      console.log('🚨 SOS TRIGGERED - Capturing WiFi data and emergency photo...');
       
       // Capture simplified SOS data (just WiFi)
       const simplifiedData = await captureSimplifiedSOSData();
+      
+      // Capture emergency photo from front camera
+      let photoUrl = null;
+      try {
+        photoUrl = await cameraCapture.captureEmergencyPhoto(userId);
+        if (photoUrl) {
+          console.log('✅ Emergency photo captured:', photoUrl);
+        }
+      } catch (error) {
+        console.error('Failed to capture emergency photo:', error);
+      }
       
       // Capture device and network information
       const deviceInfo = await Device.getInfo();
@@ -486,7 +498,8 @@ const Index = () => {
             trackingUrl,
             personalInfo: personalInfo || {},
             wifiInfo: simplifiedData.wifiInfo,
-            wifiNames: simplifiedData.wifiNames
+            wifiNames: simplifiedData.wifiNames,
+            photoUrl: photoUrl || undefined
           },
         });
       }
