@@ -329,6 +329,7 @@ export type Database = {
           id: string
           message: string
           shake_sensitivity: string
+          sms_trigger_enabled: boolean
           test_email_message: string
           test_message: string
           updated_at: string
@@ -341,6 +342,7 @@ export type Database = {
           id?: string
           message?: string
           shake_sensitivity?: string
+          sms_trigger_enabled?: boolean
           test_email_message?: string
           test_message?: string
           updated_at?: string
@@ -353,6 +355,7 @@ export type Database = {
           id?: string
           message?: string
           shake_sensitivity?: string
+          sms_trigger_enabled?: boolean
           test_email_message?: string
           test_message?: string
           updated_at?: string
