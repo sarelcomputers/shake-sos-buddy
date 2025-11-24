@@ -37,14 +37,47 @@ export const SOSStatus = ({ enabled, shakeCount, requiredShakes }: SOSStatusProp
               <p className="text-primary-foreground/90 text-lg">
                 Shake your phone {requiredShakes} times to trigger emergency alert
               </p>
-              {shakeCount > 0 && (
+              {shakeCount > 0 ? (
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="bg-background/20 backdrop-blur-sm rounded-xl p-4"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ 
+                    scale: [1, 1.05, 1],
+                    opacity: 1
+                  }}
+                  transition={{
+                    scale: {
+                      duration: 0.3,
+                      repeat: Infinity,
+                      repeatDelay: 0.5
+                    }
+                  }}
+                  className="bg-background/30 backdrop-blur-md rounded-2xl p-6 border-2 border-primary-foreground/30 shadow-2xl"
                 >
-                  <p className="text-2xl font-bold text-primary-foreground">
-                    {shakeCount}/{requiredShakes} shakes detected
+                  <div className="space-y-2">
+                    <p className="text-4xl font-black text-primary-foreground tracking-tight">
+                      {shakeCount}/{requiredShakes}
+                    </p>
+                    <p className="text-sm font-semibold text-primary-foreground/90 uppercase tracking-wider">
+                      Shakes Detected
+                    </p>
+                    <div className="w-full bg-background/40 rounded-full h-3 mt-3">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(shakeCount / requiredShakes) * 100}%` }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="bg-primary-foreground h-3 rounded-full"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-background/10 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/20"
+                >
+                  <p className="text-lg font-semibold text-primary-foreground/80">
+                    0/{requiredShakes} - Start shaking to trigger
                   </p>
                 </motion.div>
               )}
