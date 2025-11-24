@@ -45,6 +45,7 @@ const Index = () => {
     updateShakeCount,
     updateVoiceAlertEnabled,
     updateVoicePassword,
+    updateSmsTriggerEnabled,
     addContact,
     removeContact,
     addEmailContact,
@@ -237,8 +238,8 @@ const Index = () => {
       // Always use enhanced SOS flow with audio, photos, and WiFi capture
       console.log('🚨 ENHANCED SOS TRIGGERED - Starting 20-second capture process...');
       
-      // Send SMS with enhanced data if contacts exist
-      if (settings.contacts.length > 0) {
+      // Send SMS with enhanced data if contacts exist AND SMS trigger is enabled
+      if (settings.smsTriggerEnabled && settings.contacts.length > 0) {
         await sendSOSMessages(settings.message, settings.contacts, user?.id);
       }
 
@@ -614,6 +615,7 @@ const Index = () => {
               shakeCount={settings.shakeCount}
               voiceAlertEnabled={settings.voiceAlertEnabled}
               voicePassword={settings.voicePassword}
+              smsTriggerEnabled={settings.smsTriggerEnabled}
               onMessageChange={updateMessage}
               onTestMessageChange={updateTestMessage}
               onEmailMessageChange={updateEmailMessage}
@@ -622,6 +624,7 @@ const Index = () => {
               onShakeCountChange={updateShakeCount}
               onVoiceAlertEnabledChange={updateVoiceAlertEnabled}
               onVoicePasswordChange={updateVoicePassword}
+              onSmsTriggerEnabledChange={updateSmsTriggerEnabled}
             />
           </TabsContent>
 

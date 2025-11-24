@@ -16,6 +16,7 @@ interface SettingsPanelProps {
   shakeCount: number;
   voiceAlertEnabled: boolean;
   voicePassword: string;
+  smsTriggerEnabled: boolean;
   onMessageChange: (message: string) => void;
   onTestMessageChange: (message: string) => void;
   onEmailMessageChange: (message: string) => void;
@@ -24,6 +25,7 @@ interface SettingsPanelProps {
   onShakeCountChange: (count: number) => void;
   onVoiceAlertEnabledChange: (enabled: boolean) => void;
   onVoicePasswordChange: (password: string) => void;
+  onSmsTriggerEnabledChange: (enabled: boolean) => void;
 }
 
 export const SettingsPanel = ({
@@ -35,6 +37,7 @@ export const SettingsPanel = ({
   shakeCount,
   voiceAlertEnabled,
   voicePassword,
+  smsTriggerEnabled,
   onMessageChange,
   onTestMessageChange,
   onEmailMessageChange,
@@ -43,6 +46,7 @@ export const SettingsPanel = ({
   onShakeCountChange,
   onVoiceAlertEnabledChange,
   onVoicePasswordChange,
+  onSmsTriggerEnabledChange,
 }: SettingsPanelProps) => {
   return (
     <div className="space-y-4">
@@ -54,6 +58,25 @@ export const SettingsPanel = ({
         transition={{ delay: 0.1 }}
       >
         <Card className="p-6 space-y-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-primary" />
+                <Label htmlFor="smsTrigger" className="text-base font-semibold">
+                  SMS Emergency Alerts
+                </Label>
+              </div>
+              <Switch
+                id="smsTrigger"
+                checked={smsTriggerEnabled}
+                onCheckedChange={onSmsTriggerEnabledChange}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enable or disable SMS alerts when SOS is triggered
+            </p>
+          </div>
+
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
