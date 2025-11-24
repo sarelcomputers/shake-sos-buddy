@@ -600,23 +600,21 @@ const Index = () => {
               <UserCircle className="w-4 h-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="history" 
-              className="flex items-center gap-1 text-xs sm:text-sm"
+            <button 
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted flex gap-1"
               onClick={() => navigate('/history')}
             >
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">History</span>
-            </TabsTrigger>
+            </button>
             {!adminLoading && isAdmin && (
-              <TabsTrigger 
-                value="control-room" 
-                className="flex items-center gap-1 text-xs sm:text-sm"
+              <button 
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted flex gap-1"
                 onClick={() => navigate('/control-room')}
               >
                 <AlertCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">Control</span>
-              </TabsTrigger>
+              </button>
             )}
           </TabsList>
 
