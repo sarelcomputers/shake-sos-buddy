@@ -15,6 +15,7 @@ import { toast } from '@/hooks/use-toast';
 interface PersonalInfo {
   name: string;
   surname: string;
+  id_number: string;
   blood_type: string;
   medical_aid_name: string;
   medical_aid_number: string;
@@ -40,6 +41,7 @@ export const PersonalInformation = () => {
   const [info, setInfo] = useState<PersonalInfo>({
     name: '',
     surname: '',
+    id_number: '',
     blood_type: '',
     medical_aid_name: '',
     medical_aid_number: '',
@@ -77,6 +79,7 @@ export const PersonalInformation = () => {
         setInfo({
           name: data.name || '',
           surname: data.surname || '',
+          id_number: data.id_number || '',
           blood_type: data.blood_type || '',
           medical_aid_name: data.medical_aid_name || '',
           medical_aid_number: data.medical_aid_number || '',
@@ -171,6 +174,48 @@ export const PersonalInformation = () => {
     }
   };
 
+  // Calculate age from South African ID number
+  const calculateAgeFromID = (idNumber: string): string => {
+    if (idNumber.length < 6) return '';
+    
+    const yearPart = idNumber.substring(0, 2);
+    const monthPart = idNumber.substring(2, 4);
+    const dayPart = idNumber.substring(4, 6);
+    
+    // Determine century (assume 00-30 = 2000s, 31-99 = 1900s)
+    const year = parseInt(yearPart);
+    const fullYear = year <= 30 ? 2000 + year : 1900 + year;
+    
+    const month = parseInt(monthPart) - 1; // JavaScript months are 0-indexed
+    const day = parseInt(dayPart);
+    
+    const birthDate = new Date(fullYear, month, day);
+    const today = new Date();
+    
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age.toString();
+  };
+
+  const handleIDNumberChange = (idNumber: string) => {
+    // Remove any non-numeric characters
+    const cleanedID = idNumber.replace(/\D/g, '');
+    
+    // Limit to 13 digits
+    const truncatedID = cleanedID.substring(0, 13);
+    
+    setInfo({ 
+      ...info, 
+      id_number: truncatedID,
+      age: calculateAgeFromID(truncatedID)
+    });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -180,6 +225,7 @@ export const PersonalInformation = () => {
           user_id: user!.id,
           name: info.name,
           surname: info.surname,
+          id_number: info.id_number,
           blood_type: info.blood_type,
           medical_aid_name: info.medical_aid_name,
           medical_aid_number: info.medical_aid_number,
@@ -317,6 +363,38 @@ export const PersonalInformation = () => {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="id_number">ID Number</Label>
+                <Input
+                  id="id_number"
+                  type="text"
+                  inputMode="numeric"
+                  value={info.id_number}
+                  onChange={(e) => handleIDNumberChange(e.target.value)}
+                  placeholder="Enter 13-digit ID number"
+                  maxLength={13}
+                />
+                <p className="text-xs text-muted-foreground">
+                  South African ID format (YYMMDD...)
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="age">Age (Auto-calculated)</Label>
+                <Input
+                  id="age"
+                  type="text"
+                  value={info.age}
+                  readOnly
+                  disabled
+                  placeholder="Enter ID number to calculate"
+                  className="bg-muted cursor-not-allowed"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Calculated from ID number
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
                 <Select value={info.gender} onValueChange={(value) => setInfo({ ...info, gender: value })}>
                   <SelectTrigger>
@@ -328,17 +406,6 @@ export const PersonalInformation = () => {
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="age">Age</Label>
-                <Input
-                  id="age"
-                  type="number"
-                  value={info.age}
-                  onChange={(e) => setInfo({ ...info, age: e.target.value })}
-                  placeholder="Enter your age"
-                />
               </div>
             </div>
           </div>
