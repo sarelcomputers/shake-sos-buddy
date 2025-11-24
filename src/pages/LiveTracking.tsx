@@ -53,9 +53,14 @@ export default function LiveTracking() {
   useEffect(() => {
     if (!sosId) return;
 
+    let channel: any;
+    let interval: any;
+
     // Fetch SOS data and initial locations
     const fetchData = async () => {
       try {
+        console.log('LiveTracking: Fetching data for SOS ID:', sosId);
+        
         const { data: sos, error: sosError } = await supabase
           .from('sos_history')
           .select('*')
@@ -64,10 +69,25 @@ export default function LiveTracking() {
 
         if (sosError) {
           console.error('Error fetching SOS data:', sosError);
+          setLoading(false);
+          return;
         }
 
         if (sos) {
+          console.log('LiveTracking: SOS data found:', sos);
           setSOSData(sos);
+          
+          // Set up activity check based on fetched data
+          const sosTime = new Date(sos.triggered_at).getTime();
+          const now = Date.now();
+          const fiveMinutes = 5 * 60 * 1000;
+          setIsActive(now - sosTime < fiveMinutes);
+
+          // Update active status every 10 seconds
+          interval = setInterval(() => {
+            const currentTime = Date.now();
+            setIsActive(currentTime - sosTime < fiveMinutes);
+          }, 10000);
         }
 
         const { data: locs, error: locsError } = await supabase
@@ -78,10 +98,9 @@ export default function LiveTracking() {
 
         if (locsError) {
           console.error('Error fetching locations:', locsError);
-        }
-
-        if (locs) {
-          setLocations(locs);
+        } else {
+          console.log('LiveTracking: Locations found:', locs?.length || 0);
+          setLocations(locs || []);
         }
       } catch (error) {
         console.error('Error in fetchData:', error);
@@ -93,8 +112,9 @@ export default function LiveTracking() {
     fetchData();
 
     // Subscribe to real-time location updates
-    const channel = supabase
-      .channel('location-tracking')
+    console.log('LiveTracking: Setting up realtime subscription for SOS ID:', sosId);
+    channel = supabase
+      .channel(`location-tracking-${sosId}`)
       .on(
         'postgres_changes',
         {
@@ -104,33 +124,20 @@ export default function LiveTracking() {
           filter: `sos_history_id=eq.${sosId}`
         },
         (payload) => {
+          console.log('LiveTracking: New location received:', payload.new);
           setLocations(prev => [...prev, payload.new as LocationPoint]);
         }
       )
-      .subscribe();
-
-    // Check if tracking is still active (within 5 minutes)
-    if (sosData) {
-      const sosTime = new Date(sosData.triggered_at).getTime();
-      const now = Date.now();
-      const fiveMinutes = 5 * 60 * 1000;
-      setIsActive(now - sosTime < fiveMinutes);
-
-      const interval = setInterval(() => {
-        const currentTime = Date.now();
-        setIsActive(currentTime - sosTime < fiveMinutes);
-      }, 10000);
-
-      return () => {
-        clearInterval(interval);
-        supabase.removeChannel(channel);
-      };
-    }
+      .subscribe((status) => {
+        console.log('LiveTracking: Subscription status:', status);
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('LiveTracking: Cleaning up subscriptions');
+      if (interval) clearInterval(interval);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [sosId, sosData?.triggered_at]);
+  }, [sosId]);
 
   if (loading) {
     return (
