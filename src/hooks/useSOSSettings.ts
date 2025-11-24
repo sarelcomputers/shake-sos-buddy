@@ -24,6 +24,7 @@ export interface SOSSettings {
   sensitivity: number;
   shakeCount: number;
   voiceAlertEnabled: boolean;
+  voicePassword: string;
   contacts: Contact[];
   emailContacts: EmailContact[];
 }
@@ -37,6 +38,7 @@ const DEFAULT_SETTINGS: SOSSettings = {
   sensitivity: 15,
   shakeCount: 3,
   voiceAlertEnabled: true,
+  voicePassword: '',
   contacts: [],
   emailContacts: [],
 };
@@ -78,6 +80,7 @@ export const useSOSSettings = () => {
           sensitivity: parseInt(data.shake_sensitivity) || 15,
           shakeCount: 3,
           voiceAlertEnabled: data.voice_alert_enabled ?? true,
+          voicePassword: data.voice_password || '',
         }));
       }
     } catch (error) {
@@ -143,6 +146,7 @@ export const useSOSSettings = () => {
           test_email_message: updated.testEmailMessage,
           shake_sensitivity: updated.sensitivity.toString(),
           voice_alert_enabled: updated.voiceAlertEnabled,
+          voice_password: updated.voicePassword,
         })
         .eq('user_id', user.id);
 
@@ -183,6 +187,10 @@ export const useSOSSettings = () => {
 
   const updateVoiceAlertEnabled = (enabled: boolean) => {
     saveSettings({ voiceAlertEnabled: enabled });
+  };
+
+  const updateVoicePassword = (password: string) => {
+    saveSettings({ voicePassword: password });
   };
 
   const addContact = async (contact: Omit<Contact, 'id'>) => {
@@ -298,6 +306,7 @@ export const useSOSSettings = () => {
     updateSensitivity,
     updateShakeCount,
     updateVoiceAlertEnabled,
+    updateVoicePassword,
     addContact,
     removeContact,
     addEmailContact,
