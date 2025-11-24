@@ -77,6 +77,56 @@ export const SettingsPanel = ({
             </p>
           </div>
 
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-5 h-5 text-primary" />
+                <Label htmlFor="voiceAlert" className="text-base font-semibold">
+                  Voice Alert
+                </Label>
+              </div>
+              <Switch
+                id="voiceAlert"
+                checked={voiceAlertEnabled}
+                onCheckedChange={onVoiceAlertEnabledChange}
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Enable voice activation for SOS alerts
+              </p>
+              {voiceAlertEnabled && (
+                <div className="flex items-start gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Your device will stay awake (screen may dim) to continuously listen for your password. This uses more battery but works even when screen is locked.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {voiceAlertEnabled && (
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="voicePassword" className="text-sm font-medium">
+                    Voice Alert Password
+                  </Label>
+                </div>
+                <Input
+                  id="voicePassword"
+                  type="text"
+                  value={voicePassword}
+                  onChange={(e) => onVoicePasswordChange(e.target.value)}
+                  placeholder="e.g., help me now"
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Say this password when armed to activate voice confirmation. Device will ask "Do you need help?" - say "yes" to trigger alert or "no" to cancel.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
@@ -197,55 +247,6 @@ export const SettingsPanel = ({
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Volume2 className="w-5 h-5 text-primary" />
-                <Label htmlFor="voiceAlert" className="text-base font-semibold">
-                  Voice Alert
-                </Label>
-              </div>
-              <Switch
-                id="voiceAlert"
-                checked={voiceAlertEnabled}
-                onCheckedChange={onVoiceAlertEnabledChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Enable voice activation for SOS alerts
-              </p>
-              {voiceAlertEnabled && (
-                <div className="flex items-start gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md">
-                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    Your device will stay awake (screen may dim) to continuously listen for your password. This uses more battery but works even when screen is locked.
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {voiceAlertEnabled && (
-              <div className="space-y-3 pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="voicePassword" className="text-sm font-medium">
-                    Voice Alert Password
-                  </Label>
-                </div>
-                <Input
-                  id="voicePassword"
-                  type="text"
-                  value={voicePassword}
-                  onChange={(e) => onVoicePasswordChange(e.target.value)}
-                  placeholder="e.g., help me now"
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Say this password when armed to activate voice confirmation. Device will ask "Do you need help?" - say "yes" to trigger alert or "no" to cancel.
-                </p>
-              </div>
-            )}
-          </div>
         </Card>
       </motion.div>
     </div>
