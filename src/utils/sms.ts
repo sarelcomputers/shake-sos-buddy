@@ -31,12 +31,12 @@ export const sendSOSMessages = async (
       }
     }
 
-    console.log('🚨 ENHANCED SOS TRIGGERED - Starting 20-second capture process...');
+    console.log('🚨 ENHANCED SOS TRIGGERED - Starting 15-second capture...');
     
-    // Capture enhanced SOS data (audio, photos, WiFi) - takes 20 seconds
+    // Capture enhanced SOS data (audio, photos, WiFi) - takes 15 seconds
     const enhancedData = await captureEnhancedSOSData();
     
-    console.log('Enhanced data captured, proceeding with alert...');
+    console.log('✅ Capture complete! Sending alert now...');
     
     // Format personal info for message if available
     let personalInfoText = '';

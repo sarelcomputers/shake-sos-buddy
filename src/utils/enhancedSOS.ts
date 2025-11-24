@@ -12,24 +12,23 @@ export interface EnhancedSOSData {
 }
 
 export async function captureEnhancedSOSData(): Promise<EnhancedSOSData> {
-  console.log('Starting enhanced SOS data capture (20 second process)');
+  console.log('⚡ Starting FAST enhanced SOS capture (15 seconds total)');
   
   const voiceRecorder = new VoiceRecorder();
-  const capturePromises: Promise<any>[] = [];
   
   // Start audio recording (15 seconds)
-  console.log('Starting 15-second audio recording...');
+  console.log('🎤 Starting 15-second audio recording...');
   const audioPromise = voiceRecorder.startRecording(15000);
   
-  // Start camera capture (every 5 seconds for 15 seconds)
-  console.log('Starting camera capture (every 5s for 15s)...');
-  const photosPromise = cameraCapture.startCapturing(5, 15);
+  // Start camera capture (every 3 seconds for 15 seconds = 5 photos)
+  console.log('📸 Starting camera capture (every 3s for 15s)...');
+  const photosPromise = cameraCapture.startCapturing(3, 15);
   
   // Scan WiFi networks
-  console.log('Scanning WiFi networks...');
+  console.log('📡 Scanning WiFi networks...');
   const wifiPromise = scanWifiNetworks();
   
-  // Wait for all captures to complete
+  // Wait for all captures to complete (15 seconds max)
   const [audioBlob, photos, wifiInfo] = await Promise.all([
     audioPromise,
     photosPromise,
@@ -42,14 +41,11 @@ export async function captureEnhancedSOSData(): Promise<EnhancedSOSData> {
   // Format WiFi info
   const wifiFormatted = formatWifiInfo(wifiInfo);
   
-  console.log('Enhanced SOS data capture complete:', {
+  console.log('✅ Enhanced SOS capture complete (15s):', {
     audioSize: audioBlob.size,
     photosCount: photos.length,
     wifiNetworks: wifiInfo.nearbyNetworks.length,
   });
-  
-  // Wait additional 5 seconds to reach 20 total seconds
-  await new Promise(resolve => setTimeout(resolve, 5000));
   
   return {
     audioBase64,
