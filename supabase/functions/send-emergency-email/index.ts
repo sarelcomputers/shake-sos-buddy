@@ -32,6 +32,46 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // If photoUrl is provided, fetch and convert to base64
+    let photoBase64 = '';
+    if (photoUrl) {
+      try {
+        console.log('Fetching photo from:', photoUrl);
+        
+        // Extract bucket and path from the photoUrl
+        const urlParts = photoUrl.split('/storage/v1/object/public/');
+        if (urlParts.length > 1) {
+          const [bucket, ...pathParts] = urlParts[1].split('/');
+          const filePath = pathParts.join('/');
+          
+          console.log('Bucket:', bucket, 'Path:', filePath);
+          
+          // Download the image from Supabase Storage
+          const { data: imageData, error } = await supabase.storage
+            .from(bucket)
+            .download(filePath);
+          
+          if (error) {
+            console.error('Error downloading photo:', error);
+          } else if (imageData) {
+            // Convert blob to ArrayBuffer then to base64
+            const arrayBuffer = await imageData.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            
+            // Convert to base64
+            let binary = '';
+            for (let i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            photoBase64 = btoa(binary);
+            console.log('Photo converted to base64, size:', photoBase64.length);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing photo:', error);
+      }
+    }
+
     // Construct email body
     let emailBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -75,11 +115,11 @@ serve(async (req) => {
       `;
     }
 
-    if (photoUrl) {
+    if (photoBase64) {
       emailBody += `
           <div style="margin: 20px 0;">
             <h3 style="color: #111827; margin-bottom: 10px;">📷 Emergency Photo</h3>
-            <img src="${photoUrl}" 
+            <img src="data:image/jpeg;base64,${photoBase64}" 
                  alt="Emergency photo from device" 
                  style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #dc2626;" />
             <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
