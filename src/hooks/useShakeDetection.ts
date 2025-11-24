@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { storeMotionData } from '@/utils/backgroundRunner';
+import { Preferences } from '@capacitor/preferences';
 
 interface ShakeDetectionOptions {
   threshold: number;
@@ -39,7 +40,7 @@ export const useShakeDetection = ({
     let lastX = 0, lastY = 0, lastZ = 0;
     let lastUpdate = 0;
 
-    const handleMotion = (event: DeviceMotionEvent) => {
+    const handleMotion = async (event: DeviceMotionEvent) => {
       const acceleration = event.accelerationIncludingGravity;
       if (!acceleration) return;
 
@@ -65,7 +66,25 @@ export const useShakeDetection = ({
       if (totalDelta > threshold && timeDiff > 0) {
         const now = Date.now();
         
-        // Check if we're still in cooldown period
+        // Check for voice alert cooldown from Preferences
+        try {
+          const { value: cooldownValue } = await Preferences.get({ key: 'voice_alert_cooldown' });
+          if (cooldownValue) {
+            const cooldownUntil = parseInt(cooldownValue, 10);
+            if (now < cooldownUntil) {
+              const remainingSeconds = Math.ceil((cooldownUntil - now) / 1000);
+              console.log(`🔇 Shake ignored - Voice alert cooldown active (${remainingSeconds}s remaining)`);
+              return;
+            } else {
+              // Cooldown expired, clear it
+              await Preferences.remove({ key: 'voice_alert_cooldown' });
+            }
+          }
+        } catch (error) {
+          console.error('Error checking cooldown:', error);
+        }
+        
+        // Check if we're still in shake cooldown period
         const timeSinceLastTrigger = now - lastTriggerTime.current;
         const inCooldown = lastTriggerTime.current > 0 && timeSinceLastTrigger < COOLDOWN_PERIOD;
         

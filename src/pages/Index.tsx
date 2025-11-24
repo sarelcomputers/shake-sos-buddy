@@ -168,9 +168,22 @@ const Index = () => {
           console.log('Voice confirmation received:', confirmed);
           if (confirmed) {
             console.log('User confirmed "yes" - triggering SOS alert...');
+            
+            // Set cooldown for shake detection (2 minutes)
+            const cooldownUntil = Date.now() + (2 * 60 * 1000);
+            try {
+              await Preferences.set({
+                key: 'voice_alert_cooldown',
+                value: cooldownUntil.toString()
+              });
+              console.log('🔇 Shake detection disabled for 2 minutes');
+            } catch (error) {
+              console.error('Error setting cooldown:', error);
+            }
+            
             toast({
               title: "Voice Confirmed",
-              description: "Triggering emergency alert...",
+              description: "Triggering emergency alert... (Shake detection paused for 2 minutes)",
             });
             await handleSOS();
           } else {
