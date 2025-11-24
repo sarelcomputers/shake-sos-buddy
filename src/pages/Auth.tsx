@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import logo from '@/assets/alfa22-logo.png';
+import { getDeviceId, isDeviceRegistered, registerDevice } from '@/utils/deviceRegistration';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -120,7 +121,17 @@ export default function Auth() {
         toast.success('Logged in successfully!');
         navigate('/');
       } else {
-        const { error } = await supabase.auth.signUp({
+        // Check device registration before signup
+        const deviceId = await getDeviceId();
+        const deviceAlreadyRegistered = await isDeviceRegistered(deviceId);
+        
+        if (deviceAlreadyRegistered) {
+          toast.error('This device has already been used to create an account. Multiple accounts per device are not allowed.');
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -129,6 +140,12 @@ export default function Auth() {
         });
 
         if (error) throw error;
+        
+        // Register the device after successful signup
+        if (data.user) {
+          await registerDevice(data.user.id, deviceId);
+        }
+        
         toast.success('Account created successfully!');
         navigate('/');
       }
