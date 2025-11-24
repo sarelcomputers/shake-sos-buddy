@@ -42,20 +42,47 @@ export default function LiveTracking() {
   const markersRef = useRef<google.maps.Marker[]>([]);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
 
+  const [mapLoaded, setMapLoaded] = useState(false);
+
   // Load Google Maps script
   useEffect(() => {
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
+    if (window.google) {
+      setMapLoaded(true);
+      return;
     }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      console.log('Google Maps loaded successfully');
+      setMapLoaded(true);
+    };
+    script.onerror = (error) => {
+      console.error('Failed to load Google Maps:', error);
+      setError('Failed to load map. Please refresh the page.');
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
   }, []);
 
   // Initialize map when locations change
   useEffect(() => {
-    if (!mapRef.current || locations.length === 0 || !window.google) return;
+    if (!mapRef.current || locations.length === 0 || !mapLoaded || !window.google) {
+      console.log('Map init check:', { 
+        hasMapRef: !!mapRef.current, 
+        locationsCount: locations.length, 
+        mapLoaded, 
+        hasGoogle: !!window.google 
+      });
+      return;
+    }
+
+    console.log('Initializing map with locations:', locations.length);
 
     if (!mapInstanceRef.current) {
       const currentLocation = locations[locations.length - 1];
@@ -122,7 +149,7 @@ export default function LiveTracking() {
     // Center map on current location
     const currentLocation = locations[locations.length - 1];
     mapInstanceRef.current.setCenter({ lat: currentLocation.latitude, lng: currentLocation.longitude });
-  }, [locations]);
+  }, [locations, mapLoaded]);
 
   useEffect(() => {
     if (!sosId) {
@@ -299,9 +326,18 @@ export default function LiveTracking() {
       {/* Map */}
       <div 
         ref={mapRef} 
-        className="h-[calc(100vh-180px)]"
+        className="h-[calc(100vh-180px)] w-full relative bg-muted"
         style={{ minHeight: '400px' }}
-      />
+      >
+        {!mapLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="text-center">
+              <Activity className="w-8 h-8 mx-auto mb-2 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Loading map...</p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Info Panel */}
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-80 z-[1000]">
