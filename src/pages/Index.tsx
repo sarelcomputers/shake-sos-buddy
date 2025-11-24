@@ -25,6 +25,7 @@ import { toast } from '@/hooks/use-toast';
 import alfa22Logo from '@/assets/alfa22-logo.png';
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
+import { KeepAwake } from '@capacitor-community/keep-awake';
 import { checkBackgroundSOSTrigger } from '@/utils/backgroundRunner';
 import { voiceDetection } from '@/utils/voiceDetection';
 
@@ -79,12 +80,35 @@ const Index = () => {
     return () => clearInterval(checkInterval);
   }, [settings.enabled]);
 
-  // Handle voice detection cleanup
+  // Handle voice detection cleanup and wake lock
   useEffect(() => {
     return () => {
       voiceDetection.stop();
     };
   }, []);
+
+  // Keep device awake when voice alert is enabled to allow listening even when screen dims
+  useEffect(() => {
+    const manageWakeLock = async () => {
+      if (settings.enabled && settings.voiceAlertEnabled && settings.voicePassword) {
+        try {
+          await KeepAwake.keepAwake();
+          console.log('✅ Wake lock enabled - device will stay awake for voice detection');
+        } catch (error) {
+          console.error('Failed to enable wake lock:', error);
+        }
+      } else {
+        try {
+          await KeepAwake.allowSleep();
+          console.log('💤 Wake lock disabled');
+        } catch (error) {
+          console.error('Failed to disable wake lock:', error);
+        }
+      }
+    };
+
+    manageWakeLock();
+  }, [settings.enabled, settings.voiceAlertEnabled, settings.voicePassword]);
 
   const handlePermissionsComplete = () => {
     localStorage.setItem('permissions_setup_complete', 'true');
