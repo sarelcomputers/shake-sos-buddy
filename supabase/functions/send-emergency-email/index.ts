@@ -15,6 +15,7 @@ interface EmailRequest {
   trackingUrl?: string;
   personalInfo?: any;
   wifiNames?: string;
+  photoUrl?: string;
 }
 
 serve(async (req) => {
@@ -23,7 +24,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, name, subject, message, location, trackingUrl, personalInfo, wifiNames }: EmailRequest = await req.json();
+    const { to, name, subject, message, location, trackingUrl, personalInfo, wifiNames, photoUrl }: EmailRequest = await req.json();
 
     console.log('Sending email to:', to);
 
@@ -69,6 +70,20 @@ serve(async (req) => {
             </a>
             <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
               Click the button above to track the live location for the next 5 minutes
+            </p>
+          </div>
+      `;
+    }
+
+    if (photoUrl) {
+      emailBody += `
+          <div style="margin: 20px 0;">
+            <h3 style="color: #111827; margin-bottom: 10px;">📷 Emergency Photo</h3>
+            <img src="${photoUrl}" 
+                 alt="Emergency photo from device" 
+                 style="max-width: 100%; height: auto; border-radius: 8px; border: 2px solid #dc2626;" />
+            <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
+              Photo captured from the front camera at the time of alert
             </p>
           </div>
       `;

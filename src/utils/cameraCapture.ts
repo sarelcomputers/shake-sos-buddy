@@ -1,8 +1,10 @@
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource, CameraDirection } from '@capacitor/camera';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface CapturedPhoto {
   base64: string;
   timestamp: number;
+  url?: string;
 }
 
 export class CameraCapture {
@@ -49,6 +51,7 @@ export class CameraCapture {
         allowEditing: false,
         resultType: CameraResultType.Base64,
         source: CameraSource.Camera,
+        direction: CameraDirection.Front, // Use front-facing camera
         saveToGallery: false,
         correctOrientation: true,
         width: 1280,
@@ -65,6 +68,69 @@ export class CameraCapture {
     } catch (error) {
       console.error('Error capturing photo:', error);
     }
+  }
+
+  /**
+   * Capture a single photo from front camera for emergency alert
+   */
+  async captureEmergencyPhoto(userId: string): Promise<string | null> {
+    try {
+      console.log('📸 Capturing emergency photo from front camera...');
+      
+      const photo = await Camera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Camera,
+        direction: CameraDirection.Front,
+        saveToGallery: false,
+        correctOrientation: true,
+        width: 1280,
+        height: 720,
+      });
+
+      if (!photo.base64String) {
+        console.error('No photo data captured');
+        return null;
+      }
+
+      // Upload to Supabase Storage
+      const fileName = `${userId}/${Date.now()}.jpg`;
+      const { data, error } = await supabase.storage
+        .from('emergency-photos')
+        .upload(fileName, this.base64ToBlob(photo.base64String, 'image/jpeg'), {
+          contentType: 'image/jpeg',
+          upsert: false,
+        });
+
+      if (error) {
+        console.error('Error uploading photo:', error);
+        return null;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('emergency-photos')
+        .getPublicUrl(fileName);
+
+      console.log('✅ Emergency photo uploaded:', urlData.publicUrl);
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error capturing emergency photo:', error);
+      return null;
+    }
+  }
+
+  private base64ToBlob(base64: string, mimeType: string): Blob {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: mimeType });
   }
 
   stopCapturing(): void {
