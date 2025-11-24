@@ -131,7 +131,7 @@ serve(async (req) => {
                 <p style="color: #666; margin: 5px 0;"><strong>Location:</strong> ${latitude}, ${longitude}</p>
                 <div style="text-align: center; margin-top: 15px;">
                   <a href="${locationUrl}" class="btn">📍 View on Google Maps</a>
-                  ${trackingUrl ? `<a href="${trackingUrl}" class="btn" style="background-color: #991b1b;">🔴 Live Tracking (1 min)</a>` : ''}
+                  ${trackingUrl ? `<a href="${trackingUrl}" class="btn" style="background-color: #991b1b;">🔴 Live Tracking (3 min)</a>` : ''}
                 </div>
               </div>
 
