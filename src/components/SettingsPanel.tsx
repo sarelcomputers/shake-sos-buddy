@@ -12,8 +12,8 @@ interface SettingsPanelProps {
   testMessage: string;
   emailMessage: string;
   testEmailMessage: string;
-  whatsappMessage: string;
-  testWhatsAppMessage: string;
+  telegramMessage: string;
+  testTelegramMessage: string;
   sensitivity: number;
   shakeCount: number;
   voiceAlertEnabled: boolean;
@@ -24,8 +24,8 @@ interface SettingsPanelProps {
   onTestMessageChange: (message: string) => void;
   onEmailMessageChange: (message: string) => void;
   onTestEmailMessageChange: (message: string) => void;
-  onWhatsAppMessageChange: (message: string) => void;
-  onTestWhatsAppMessageChange: (message: string) => void;
+  onTelegramMessageChange: (message: string) => void;
+  onTestTelegramMessageChange: (message: string) => void;
   onSensitivityChange: (sensitivity: number) => void;
   onShakeCountChange: (count: number) => void;
   onVoiceAlertEnabledChange: (enabled: boolean) => void;
@@ -39,8 +39,8 @@ export const SettingsPanel = ({
   testMessage,
   emailMessage,
   testEmailMessage,
-  whatsappMessage,
-  testWhatsAppMessage,
+  telegramMessage,
+  testTelegramMessage,
   sensitivity,
   shakeCount,
   voiceAlertEnabled,
@@ -51,8 +51,8 @@ export const SettingsPanel = ({
   onTestMessageChange,
   onEmailMessageChange,
   onTestEmailMessageChange,
-  onWhatsAppMessageChange,
-  onTestWhatsAppMessageChange,
+  onTelegramMessageChange,
+  onTestTelegramMessageChange,
   onSensitivityChange,
   onShakeCountChange,
   onVoiceAlertEnabledChange,
@@ -218,38 +218,38 @@ export const SettingsPanel = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
-              <Label htmlFor="whatsappMessage" className="text-base font-semibold">
-                Emergency Message (WhatsApp)
+              <Label htmlFor="telegramMessage" className="text-base font-semibold">
+                Emergency Message (Telegram)
               </Label>
             </div>
             <Textarea
-              id="whatsappMessage"
-              value={whatsappMessage}
-              onChange={(e) => onWhatsAppMessageChange(e.target.value)}
-              placeholder="Enter your emergency WhatsApp message..."
+              id="telegramMessage"
+              value={telegramMessage}
+              onChange={(e) => onTelegramMessageChange(e.target.value)}
+              placeholder="Enter your emergency Telegram message..."
               className="min-h-[100px] resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              This message will be sent via WhatsApp with your location
+              This message will be sent via Telegram with your location
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-primary" />
-              <Label htmlFor="testWhatsAppMessage" className="text-base font-semibold">
-                Test Message (WhatsApp)
+              <Label htmlFor="testTelegramMessage" className="text-base font-semibold">
+                Test Message (Telegram)
               </Label>
             </div>
             <Textarea
-              id="testWhatsAppMessage"
-              value={testWhatsAppMessage}
-              onChange={(e) => onTestWhatsAppMessageChange(e.target.value)}
-              placeholder="Enter your test WhatsApp message..."
+              id="testTelegramMessage"
+              value={testTelegramMessage}
+              onChange={(e) => onTestTelegramMessageChange(e.target.value)}
+              placeholder="Enter your test Telegram message..."
               className="min-h-[100px] resize-none"
             />
             <p className="text-xs text-muted-foreground">
-              This message will be sent when you test a WhatsApp contact
+              This message will be sent when you test a Telegram contact
             </p>
           </div>
 

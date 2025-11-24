@@ -14,7 +14,7 @@ import { Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface AddTelegramContactDialogProps {
-  onAdd: (name: string, chatId: string, isGroup: boolean) => void;
+  onAdd: (contact: { name: string; chat_id: string; is_group: boolean }) => void;
 }
 
 export const AddTelegramContactDialog = ({ onAdd }: AddTelegramContactDialogProps) => {
@@ -26,7 +26,7 @@ export const AddTelegramContactDialog = ({ onAdd }: AddTelegramContactDialogProp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name && chatId) {
-      onAdd(name, chatId, isGroup);
+      onAdd({ name, chat_id: chatId, is_group: isGroup });
       setName("");
       setChatId("");
       setIsGroup(false);
