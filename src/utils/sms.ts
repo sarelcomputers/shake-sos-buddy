@@ -132,12 +132,12 @@ export const sendSOSMessages = async (
         return;
       }
 
-      // Start live location tracking (1 minute)
-      console.log('Starting live location tracking (1 minute)...');
+      // Start live location tracking (3 minutes)
+      console.log('Starting live location tracking (3 minutes)...');
       await startLocationTracking({
         sosHistoryId: sosHistoryData.id,
         userId: userId!,
-        durationMinutes: 1
+        durationMinutes: 3
       });
 
       // Send enhanced control room notification with all attachments
