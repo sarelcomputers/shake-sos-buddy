@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { publicSupabase } from '@/integrations/supabase/publicClient';
-import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
-import { Icon } from 'leaflet';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Clock, Activity, AlertCircle } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
 
 interface LocationPoint {
   id: string;
@@ -25,23 +22,13 @@ interface SOSData {
   personal_info: any;
 }
 
-const currentLocationIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBpsCYESmSNFPKNnzh4WWyuArYeN_BSb88';
 
-const pastLocationIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [20, 33],
-  iconAnchor: [10, 33],
-  popupAnchor: [1, -28],
-  shadowSize: [33, 33]
-});
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
 
 export default function LiveTracking() {
   const { sosId } = useParams<{ sosId: string }>();
@@ -50,6 +37,92 @@ export default function LiveTracking() {
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
+
+  // Load Google Maps script
+  useEffect(() => {
+    if (!window.google) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}`;
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  // Initialize map when locations change
+  useEffect(() => {
+    if (!mapRef.current || locations.length === 0 || !window.google) return;
+
+    if (!mapInstanceRef.current) {
+      const currentLocation = locations[locations.length - 1];
+      mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+        center: { lat: currentLocation.latitude, lng: currentLocation.longitude },
+        zoom: 15,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+      });
+    }
+
+    // Clear existing markers and polyline
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+    if (polylineRef.current) polylineRef.current.setMap(null);
+
+    // Add markers for all locations
+    locations.forEach((loc, index) => {
+      const marker = new google.maps.Marker({
+        position: { lat: loc.latitude, lng: loc.longitude },
+        map: mapInstanceRef.current!,
+        title: index === locations.length - 1 ? 'Current Location' : `Point ${index + 1}`,
+        icon: index === locations.length - 1 
+          ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+          : 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="padding: 8px;">
+            <p style="font-weight: 600; margin-bottom: 4px;">
+              ${index === locations.length - 1 ? 'Current Location' : `Point ${index + 1}`}
+            </p>
+            <p style="font-size: 12px; color: #666;">
+              ${new Date(loc.timestamp).toLocaleTimeString()}
+            </p>
+            ${loc.speed ? `<p style="font-size: 12px;">Speed: ${(loc.speed * 3.6).toFixed(1)} km/h</p>` : ''}
+            ${loc.accuracy ? `<p style="font-size: 12px;">Accuracy: ±${loc.accuracy.toFixed(0)}m</p>` : ''}
+          </div>
+        `,
+      });
+
+      marker.addListener('click', () => {
+        infoWindow.open(mapInstanceRef.current!, marker);
+      });
+
+      markersRef.current.push(marker);
+    });
+
+    // Draw polyline path
+    if (locations.length > 1) {
+      const path = locations.map(loc => ({ lat: loc.latitude, lng: loc.longitude }));
+      polylineRef.current = new google.maps.Polyline({
+        path,
+        geodesic: true,
+        strokeColor: '#0000FF',
+        strokeOpacity: 0.7,
+        strokeWeight: 3,
+        map: mapInstanceRef.current!,
+      });
+    }
+
+    // Center map on current location
+    const currentLocation = locations[locations.length - 1];
+    mapInstanceRef.current.setCenter({ lat: currentLocation.latitude, lng: currentLocation.longitude });
+  }, [locations]);
 
   useEffect(() => {
     if (!sosId) {
@@ -200,7 +273,6 @@ export default function LiveTracking() {
   }
 
   const currentLocation = locations[locations.length - 1];
-  const pathCoordinates = locations.map(loc => [loc.latitude, loc.longitude] as [number, number]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -225,54 +297,11 @@ export default function LiveTracking() {
       </div>
 
       {/* Map */}
-      <div className="h-[calc(100vh-120px)]">
-        <MapContainer
-          // @ts-ignore - react-leaflet types issue with center prop
-          center={[currentLocation.latitude, currentLocation.longitude]}
-          zoom={15}
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          
-          {/* Path polyline */}
-          {pathCoordinates.length > 1 && (
-            <Polyline
-              positions={pathCoordinates}
-              pathOptions={{ color: 'blue', weight: 3, opacity: 0.7 }}
-            />
-          )}
-
-          {/* All location markers */}
-          {locations.map((loc, index) => {
-            const MarkerAny = Marker as any;
-            return (
-              <MarkerAny
-                key={loc.id}
-                position={[loc.latitude, loc.longitude]}
-                icon={index === locations.length - 1 ? currentLocationIcon : pastLocationIcon}
-              >
-                <Popup>
-                  <div className="text-sm">
-                    <p className="font-semibold mb-1">
-                      {index === locations.length - 1 ? 'Current Location' : `Point ${index + 1}`}
-                    </p>
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
-                      {new Date(loc.timestamp).toLocaleTimeString()}
-                    </p>
-                    {loc.speed && (
-                      <p className="text-xs mt-1">Speed: {(loc.speed * 3.6).toFixed(1)} km/h</p>
-                    )}
-                    {loc.accuracy && (
-                      <p className="text-xs">Accuracy: ±{loc.accuracy.toFixed(0)}m</p>
-                    )}
-                  </div>
-                </Popup>
-              </MarkerAny>
-            );
-          })}
-        </MapContainer>
-      </div>
+      <div 
+        ref={mapRef} 
+        className="h-[calc(100vh-180px)]"
+        style={{ minHeight: '400px' }}
+      />
 
       {/* Info Panel */}
       <div className="fixed bottom-4 left-4 right-4 md:left-auto md:w-80 z-[1000]">
