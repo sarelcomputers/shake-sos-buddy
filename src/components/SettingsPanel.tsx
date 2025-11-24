@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { MessageSquare, Gauge, Hash, Volume2 } from 'lucide-react';
+import { MessageSquare, Gauge, Hash, Volume2, AlertCircle, Shield, Mail } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -211,9 +211,19 @@ export const SettingsPanel = ({
                 onCheckedChange={onVoiceAlertEnabledChange}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Enable voice activation for SOS alerts
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Enable voice activation for SOS alerts
+              </p>
+              {voiceAlertEnabled && (
+                <div className="flex items-start gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Your device will stay awake (screen may dim) to continuously listen for your password. This uses more battery but works even when screen is locked.
+                  </p>
+                </div>
+              )}
+            </div>
             
             {voiceAlertEnabled && (
               <div className="space-y-3 pt-2 border-t">
@@ -227,7 +237,7 @@ export const SettingsPanel = ({
                   type="text"
                   value={voicePassword}
                   onChange={(e) => onVoicePasswordChange(e.target.value)}
-                  placeholder="e.g., help me"
+                  placeholder="e.g., help me now"
                   className="w-full"
                 />
                 <p className="text-xs text-muted-foreground">
