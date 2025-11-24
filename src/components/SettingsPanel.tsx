@@ -157,13 +157,13 @@ export const SettingsPanel = ({
             <div className="flex items-center gap-2">
               <Gauge className="w-5 h-5 text-primary" />
               <Label htmlFor="sensitivity" className="text-base font-semibold">
-                Shake Sensitivity: {sensitivity}
+                Shake Sensitivity: {35 - sensitivity}
               </Label>
             </div>
             <Slider
               id="sensitivity"
-              value={[sensitivity]}
-              onValueChange={([value]) => onSensitivityChange(value)}
+              value={[35 - sensitivity]}
+              onValueChange={([value]) => onSensitivityChange(35 - value)}
               min={5}
               max={30}
               step={1}
@@ -186,7 +186,8 @@ export const SettingsPanel = ({
               id="shakeCount"
               type="number"
               value={shakeCount}
-              onChange={(e) => onShakeCountChange(parseInt(e.target.value) || 3)}
+              onChange={(e) => onShakeCountChange(parseInt(e.target.value) || 5)}
+              onFocus={(e) => e.target.select()}
               min={2}
               max={10}
               className="w-full"
