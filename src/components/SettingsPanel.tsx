@@ -15,6 +15,7 @@ interface SettingsPanelProps {
   sensitivity: number;
   shakeCount: number;
   voiceAlertEnabled: boolean;
+  voicePassword: string;
   onMessageChange: (message: string) => void;
   onTestMessageChange: (message: string) => void;
   onEmailMessageChange: (message: string) => void;
@@ -22,6 +23,7 @@ interface SettingsPanelProps {
   onSensitivityChange: (sensitivity: number) => void;
   onShakeCountChange: (count: number) => void;
   onVoiceAlertEnabledChange: (enabled: boolean) => void;
+  onVoicePasswordChange: (password: string) => void;
 }
 
 export const SettingsPanel = ({
@@ -32,6 +34,7 @@ export const SettingsPanel = ({
   sensitivity,
   shakeCount,
   voiceAlertEnabled,
+  voicePassword,
   onMessageChange,
   onTestMessageChange,
   onEmailMessageChange,
@@ -39,6 +42,7 @@ export const SettingsPanel = ({
   onSensitivityChange,
   onShakeCountChange,
   onVoiceAlertEnabledChange,
+  onVoicePasswordChange,
 }: SettingsPanelProps) => {
   return (
     <div className="space-y-4">
@@ -184,8 +188,29 @@ export const SettingsPanel = ({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Enable voice alert when SOS is triggered
+              Enable voice activation for SOS alerts
             </p>
+            
+            {voiceAlertEnabled && (
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="voicePassword" className="text-sm font-medium">
+                    Voice Alert Password
+                  </Label>
+                </div>
+                <Input
+                  id="voicePassword"
+                  type="text"
+                  value={voicePassword}
+                  onChange={(e) => onVoicePasswordChange(e.target.value)}
+                  placeholder="e.g., help me"
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Say this password when armed to activate voice confirmation. Device will ask "Do you need help?" - say "yes" to trigger alert or "no" to cancel.
+                </p>
+              </div>
+            )}
           </div>
         </Card>
       </motion.div>

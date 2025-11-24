@@ -26,6 +26,7 @@ import alfa22Logo from '@/assets/alfa22-logo.png';
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
 import { checkBackgroundSOSTrigger } from '@/utils/backgroundRunner';
+import { voiceDetection } from '@/utils/voiceDetection';
 
 const Index = () => {
   const { user } = useAuth();
@@ -43,6 +44,7 @@ const Index = () => {
     updateSensitivity,
     updateShakeCount,
     updateVoiceAlertEnabled,
+    updateVoicePassword,
     addContact,
     removeContact,
     addEmailContact,
@@ -75,6 +77,13 @@ const Index = () => {
     
     return () => clearInterval(checkInterval);
   }, [settings.enabled]);
+
+  // Handle voice detection cleanup
+  useEffect(() => {
+    return () => {
+      voiceDetection.stop();
+    };
+  }, []);
 
   const handlePermissionsComplete = () => {
     localStorage.setItem('permissions_setup_complete', 'true');
@@ -143,15 +152,47 @@ const Index = () => {
       console.error('Error storing background settings:', error);
     }
     
+    // Handle voice detection
+    if (willBeEnabled && settings.voiceAlertEnabled && settings.voicePassword) {
+      voiceDetection.start({
+        password: settings.voicePassword,
+        onPasswordDetected: () => {
+          console.log('Voice password detected, awaiting confirmation...');
+          toast({
+            title: "Voice Detected",
+            description: "Say 'yes' to trigger alert or 'no' to cancel",
+          });
+        },
+        onConfirmation: async (confirmed) => {
+          if (confirmed) {
+            console.log('User confirmed SOS via voice');
+            await handleSOS();
+          } else {
+            console.log('User cancelled SOS via voice');
+            toast({
+              title: "Alert Cancelled",
+              description: "Voice alert was cancelled",
+            });
+          }
+        },
+      });
+    } else {
+      voiceDetection.stop();
+    }
+    
     if (willBeEnabled) {
       const isNative = Capacitor.isNativePlatform();
       const platform = Capacitor.getPlatform();
       
+      const voiceMsg = settings.voiceAlertEnabled && settings.voicePassword 
+        ? ` Voice activation enabled - say "${settings.voicePassword}" to trigger.`
+        : '';
+      
       toast({
         title: "System Armed ✓",
         description: isNative 
-          ? `Background monitoring enabled. App will listen for shakes even when closed${platform === 'ios' ? ' (keep app in foreground on iOS)' : ''}.`
-          : "Device will stay awake and monitor for shakes even when screen is locked",
+          ? `Background monitoring enabled. App will listen for shakes even when closed${platform === 'ios' ? ' (keep app in foreground on iOS)' : ''}.${voiceMsg}`
+          : `Device will stay awake and monitor for shakes even when screen is locked.${voiceMsg}`,
         duration: 6000,
       });
     } else {
@@ -425,6 +466,7 @@ const Index = () => {
               sensitivity={settings.sensitivity}
               shakeCount={settings.shakeCount}
               voiceAlertEnabled={settings.voiceAlertEnabled}
+              voicePassword={settings.voicePassword}
               onMessageChange={updateMessage}
               onTestMessageChange={updateTestMessage}
               onEmailMessageChange={updateEmailMessage}
@@ -432,6 +474,7 @@ const Index = () => {
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
               onVoiceAlertEnabledChange={updateVoiceAlertEnabled}
+              onVoicePasswordChange={updateVoicePassword}
             />
           </TabsContent>
 
