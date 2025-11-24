@@ -334,10 +334,10 @@ const Index = () => {
     }
   };
 
-  // Enhanced emergency emails with audio, photos, WiFi
+  // Simplified emergency emails with location, tracking, personal info, and WiFi
   const sendEnhancedEmergencyEmails = async (message: string, contacts: EmailContact[], userId: string) => {
-    // Import enhanced SOS utilities
-    const { captureEnhancedSOSData, uploadSOSFiles } = await import('@/utils/enhancedSOS');
+    // Import simplified SOS utilities
+    const { captureSimplifiedSOSData } = await import('@/utils/enhancedSOS');
     const { startLocationTracking, generateTrackingUrl } = await import('@/utils/locationTracking');
     const { Device } = await import('@capacitor/device');
     const { Network } = await import('@capacitor/network');
@@ -347,6 +347,7 @@ const Index = () => {
       // Get current location
       const position = await Geolocation.getCurrentPosition();
       const { latitude, longitude } = position.coords;
+      const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
       
       // Fetch personal information
       const { data: personalInfo } = await supabase
@@ -355,12 +356,10 @@ const Index = () => {
         .eq('user_id', userId)
         .single();
 
-      console.log('🚨 ENHANCED EMAIL SOS - Starting 20-second capture process...');
+      console.log('🚨 SOS TRIGGERED - Capturing WiFi data...');
       
-      // Capture enhanced SOS data (audio, photos, WiFi) - takes 20 seconds
-      const enhancedData = await captureEnhancedSOSData();
-      
-      console.log('Enhanced data captured, proceeding with email alerts...');
+      // Capture simplified SOS data (just WiFi)
+      const simplifiedData = await captureSimplifiedSOSData();
       
       // Capture device and network information
       const deviceInfo = await Device.getInfo();
@@ -395,10 +394,8 @@ const Index = () => {
           device_serial: deviceId.identifier,
           ip_address: ipAddress,
           network_isp: networkStatus.connectionType,
-          wifi_info: enhancedData.wifiInfo as any,
+          wifi_info: simplifiedData.wifiInfo as any,
           personal_info: personalInfo,
-          audio_duration_seconds: enhancedData.audioDuration,
-          audio_transcript: null
         }])
         .select()
         .single();
@@ -408,28 +405,19 @@ const Index = () => {
         throw sosHistoryError;
       }
 
-      // Upload enhanced SOS files to storage
-      let fileUrls = { audioUrl: '', photoUrls: [] as string[] };
-      try {
-        fileUrls = await uploadSOSFiles(sosHistoryData.id, userId, enhancedData);
-        console.log('Files uploaded successfully:', fileUrls);
-      } catch (error) {
-        console.error('Error uploading SOS files:', error);
-      }
-
-      // Start live location tracking (3 minutes)
-      console.log('Starting live location tracking (3 minutes)...');
+      // Start live location tracking (5 minutes)
+      console.log('Starting live location tracking (5 minutes)...');
       startLocationTracking({
         sosHistoryId: sosHistoryData.id,
         userId: userId,
-        durationMinutes: 3
+        durationMinutes: 5
       }).catch(err => console.error('Location tracking error:', err));
 
-      // Generate tracking URL
+      // Generate tracking URL (valid for 5 minutes)
       const trackingUrl = generateTrackingUrl(sosHistoryData.id);
       
-      // Send enhanced notification to control room and email contacts
-      console.log('Sending enhanced email notifications with all attachments...');
+      // Send notification to control room
+      console.log('Sending email notifications...');
       
       await supabase.functions.invoke('send-sos-notification', {
         body: {
@@ -441,13 +429,10 @@ const Index = () => {
           deviceSerial: deviceId.identifier,
           ipAddress,
           networkISP: networkStatus.connectionType,
-          wifiInfo: enhancedData.wifiFormatted,
+          wifiNames: simplifiedData.wifiNames,
           personalInfo,
           trackingUrl,
           contactsNotified: contacts.length,
-          audioUrl: fileUrls.audioUrl,
-          photoUrls: fileUrls.photoUrls,
-          audioDuration: enhancedData.audioDuration
         }
       });
       
@@ -457,34 +442,18 @@ const Index = () => {
           body: {
             to: contact.email,
             name: contact.name,
-            subject: '🚨 EMERGENCY ALERT WITH ATTACHMENTS',
-            message: `${message}\n\n📍 Location: https://www.google.com/maps?q=${latitude},${longitude}\n🔴 Live Tracking: ${trackingUrl}\n\n🎤 Audio Recording: ${fileUrls.audioUrl}\n📸 Photos: ${fileUrls.photoUrls.join('\n')}\n\n📡 WiFi Info:\n${enhancedData.wifiFormatted}`,
-            location: `https://www.google.com/maps?q=${latitude},${longitude}`,
+            subject: '🚨 EMERGENCY ALERT',
+            message,
+            location: locationUrl,
+            trackingUrl,
             personalInfo: personalInfo || {},
+            wifiNames: simplifiedData.wifiNames
           },
         });
       }
       
-      // Transcribe audio in background
-      console.log('Starting audio transcription...');
-      supabase.functions.invoke('transcribe-audio', {
-        body: { audio: enhancedData.audioBase64 }
-      }).then(async (transcribeResponse) => {
-        const audioTranscript = transcribeResponse.data?.text || null;
-        console.log('Transcription complete:', audioTranscript ? 'Success' : 'No transcript');
-        
-        if (audioTranscript) {
-          await supabase
-            .from('sos_history')
-            .update({ audio_transcript: audioTranscript })
-            .eq('id', sosHistoryData.id);
-        }
-      }).catch(error => {
-        console.error('Error transcribing audio:', error);
-      });
-      
     } catch (error) {
-      console.error('Error sending enhanced emergency emails:', error);
+      console.error('Error sending emergency emails:', error);
       throw error;
     }
   };
