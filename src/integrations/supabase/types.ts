@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      device_registrations: {
+        Row: {
+          device_id: string
+          device_model: string | null
+          id: string
+          registered_at: string | null
+          user_id: string
+        }
+        Insert: {
+          device_id: string
+          device_model?: string | null
+          id?: string
+          registered_at?: string | null
+          user_id: string
+        }
+        Update: {
+          device_id?: string
+          device_model?: string | null
+          id?: string
+          registered_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       emergency_contacts: {
         Row: {
           created_at: string
