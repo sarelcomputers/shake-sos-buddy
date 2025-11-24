@@ -7,13 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SOSStatus } from '@/components/SOSStatus';
 import { ContactList } from '@/components/ContactList';
 import { EmailContactList, type EmailContact } from '@/components/EmailContactList';
-import { TelegramContactList } from '@/components/TelegramContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { PersonalInformation } from '@/components/PersonalInformation';
 import { AddContactDialog } from '@/components/AddContactDialog';
 import { AddEmailContactDialog } from '@/components/AddEmailContactDialog';
-import { AddTelegramContactDialog } from '@/components/AddTelegramContactDialog';
 import { PermissionsSetup } from '@/components/PermissionsSetup';
 import { SubscriptionGate } from '@/components/SubscriptionGate';
 import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
@@ -44,8 +42,6 @@ const Index = () => {
     updateTestMessage,
     updateEmailMessage,
     updateTestEmailMessage,
-    updateTelegramMessage,
-    updateTestTelegramMessage,
     updateSensitivity,
     updateShakeCount,
     updateVoiceAlertEnabled,
@@ -56,13 +52,10 @@ const Index = () => {
     removeContact,
     addEmailContact,
     removeEmailContact,
-    addTelegramContact,
-    removeTelegramContact,
   } = useSOSSettings();
 
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddEmailContact, setShowAddEmailContact] = useState(false);
-  const [showAddTelegramContact, setShowAddTelegramContact] = useState(false);
   const [permissionsComplete, setPermissionsComplete] = useState(false);
 
   useEffect(() => {
@@ -320,27 +313,6 @@ const Index = () => {
       toast({
         title: "Test Failed",
         description: "Could not send test email. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleTestTelegram = async (contact: { id: string; name: string; chat_id: string; is_group: boolean }) => {
-    try {
-      await supabase.functions.invoke('send-telegram', {
-        body: {
-          chatIds: [contact.chat_id],
-          message: settings.testTelegramMessage
-        }
-      });
-      toast({
-        title: "Test Telegram Sent!",
-        description: `Test Telegram message sent to ${contact.name}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Test Failed",
-        description: "Could not send test Telegram message. Please try again.",
         variant: "destructive",
       });
     }
@@ -661,12 +633,6 @@ const Index = () => {
               onAdd={() => setShowAddEmailContact(true)}
               onTest={handleTestEmail}
             />
-            <TelegramContactList
-              contacts={settings.telegramContacts}
-              onRemove={removeTelegramContact}
-              onTest={handleTestTelegram}
-            />
-            <AddTelegramContactDialog onAdd={addTelegramContact} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 mt-6">
@@ -675,8 +641,6 @@ const Index = () => {
               testMessage={settings.testMessage}
               emailMessage={settings.emailMessage}
               testEmailMessage={settings.testEmailMessage}
-              telegramMessage={settings.telegramMessage}
-              testTelegramMessage={settings.testTelegramMessage}
               sensitivity={settings.sensitivity}
               shakeCount={settings.shakeCount}
               voiceAlertEnabled={settings.voiceAlertEnabled}
@@ -687,8 +651,6 @@ const Index = () => {
               onTestMessageChange={updateTestMessage}
               onEmailMessageChange={updateEmailMessage}
               onTestEmailMessageChange={updateTestEmailMessage}
-              onTelegramMessageChange={updateTelegramMessage}
-              onTestTelegramMessageChange={updateTestTelegramMessage}
               onSensitivityChange={updateSensitivity}
               onShakeCountChange={updateShakeCount}
               onVoiceAlertEnabledChange={updateVoiceAlertEnabled}
