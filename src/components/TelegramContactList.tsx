@@ -1,21 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Trash2, Users } from "lucide-react";
+import { Trash2, Users, Send } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface TelegramContact {
   id: string;
   name: string;
   chat_id: string;
-  is_group: boolean;
+  is_group?: boolean;
 }
 
 interface TelegramContactListProps {
   contacts: TelegramContact[];
   onRemove: (id: string) => void;
+  onTest?: (contact: TelegramContact) => void;
 }
 
-export const TelegramContactList = ({ contacts, onRemove }: TelegramContactListProps) => {
+export const TelegramContactList = ({ contacts, onRemove, onTest }: TelegramContactListProps) => {
   return (
     <div className="space-y-2">
       {contacts.length === 0 ? (
@@ -40,13 +41,26 @@ export const TelegramContactList = ({ contacts, onRemove }: TelegramContactListP
                   </p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onRemove(contact.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                {onTest && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onTest(contact)}
+                    title="Send test message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onRemove(contact.id)}
+                  title="Remove contact"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </Card>
           </motion.div>
         ))
