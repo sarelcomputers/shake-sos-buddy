@@ -94,7 +94,7 @@ export const BackgroundServiceManager = ({
           Background Services
         </CardTitle>
         <CardDescription>
-          Enable all necessary permissions for the app to work in the background and on locked screens
+          Enable precise location and microphone access for background monitoring, even when the phone is locked or app is minimized. This is required for shake and voice triggers to work reliably.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -104,12 +104,12 @@ export const BackgroundServiceManager = ({
           <div className="grid gap-2">
             <PermissionItem
               icon={<MapPin className="w-4 h-4" />}
-              label="Location (Always)"
+              label="Precise Location (Background)"
               granted={permissionStatus.location}
             />
             <PermissionItem
               icon={<Mic className="w-4 h-4" />}
-              label="Microphone"
+              label="Microphone (Background)"
               granted={permissionStatus.microphone}
             />
             <PermissionItem
@@ -177,7 +177,18 @@ export const BackgroundServiceManager = ({
         {allPermissionsGranted && (
           <div className="text-center text-sm text-muted-foreground">
             <CheckCircle2 className="w-5 h-5 mx-auto mb-2 text-primary" />
-            All permissions granted. Background services will start when SOS is enabled.
+            All permissions granted! Your device will now monitor for voice and shake triggers continuously, even when locked or minimized.
+          </div>
+        )}
+        
+        {!allPermissionsGranted && (
+          <div className="p-3 rounded-lg bg-muted/30 border border-muted">
+            <p className="text-xs text-muted-foreground">
+              <strong>Note:</strong> After granting permissions, make sure to:
+              <br />• Select "Allow all the time" for location when prompted
+              <br />• Allow microphone access for voice detection
+              <br />• Disable battery optimization for continuous monitoring
+            </p>
           </div>
         )}
       </CardContent>
