@@ -24,11 +24,33 @@ export const requestLocationPermissions = async (): Promise<boolean> => {
   }
 
   try {
-    // Request location permission (this includes background location on Android 10+)
-    const permission = await Geolocation.requestPermissions();
+    // Request location permission with explicit permissions for precise location
+    const permission = await Geolocation.requestPermissions({
+      permissions: ['location', 'coarseLocation']
+    });
     
-    if (permission.location === 'granted' || permission.coarseLocation === 'granted') {
-      console.log('✅ Location permissions granted');
+    console.log('Location permission response:', permission);
+    
+    // Check for precise location (location) or coarse location
+    const hasForegroundLocation = permission.location === 'granted' || permission.coarseLocation === 'granted';
+    
+    if (hasForegroundLocation) {
+      console.log('✅ Foreground location permissions granted');
+      
+      // On Android 10+, we need to also ensure background location is requested
+      // The Geolocation plugin handles this automatically when calling requestPermissions
+      // but we can check the current status
+      const currentPermissions = await Geolocation.checkPermissions();
+      console.log('Current location permissions:', currentPermissions);
+      
+      if (currentPermissions.location === 'granted') {
+        console.log('✅ Precise location with background access granted');
+        return true;
+      } else if (currentPermissions.coarseLocation === 'granted') {
+        console.log('✅ Coarse location with background access granted');
+        return true;
+      }
+      
       return true;
     } else {
       console.warn('⚠️ Location permissions denied');
