@@ -28,6 +28,7 @@ import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { checkBackgroundSOSTrigger } from '@/utils/backgroundRunner';
 import { voiceDetection } from '@/utils/voiceDetection';
+import { BackgroundServiceManager } from '@/components/BackgroundServiceManager';
 
 const Index = () => {
   const { user } = useAuth();
@@ -634,6 +635,16 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 mt-6">
+            <BackgroundServiceManager
+              isEnabled={settings.enabled}
+              onPermissionsComplete={() => {
+                toast({
+                  title: "Background Permissions Ready",
+                  description: "All background services are configured and ready.",
+                });
+              }}
+            />
+            
             <SettingsPanel
               message={settings.message}
               testMessage={settings.testMessage}
