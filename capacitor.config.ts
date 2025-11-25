@@ -28,7 +28,12 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: true,
     captureInput: true,
-    webContentsDebuggingEnabled: true
+    webContentsDebuggingEnabled: true,
+    // Background execution settings
+    backgroundMode: {
+      enabled: true,
+      description: 'Enables SOS monitoring with location tracking, voice detection, and shake detection even when screen is locked or app is minimized'
+    }
   }
 };
 
