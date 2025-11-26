@@ -53,7 +53,7 @@ export const SettingsPanel = ({
   const [localEmailMessage, setLocalEmailMessage] = useState(emailMessage);
   const [localTestEmailMessage, setLocalTestEmailMessage] = useState(testEmailMessage);
   const [localSensitivity, setLocalSensitivity] = useState(sensitivity);
-  const [localShakeCount, setLocalShakeCount] = useState(shakeCount);
+  const [localShakeCount, setLocalShakeCount] = useState<number>(shakeCount);
   const [localVoiceAlertEnabled, setLocalVoiceAlertEnabled] = useState(voiceAlertEnabled);
   const [localVoicePassword, setLocalVoicePassword] = useState(voicePassword);
   const [localSmsTriggerEnabled, setLocalSmsTriggerEnabled] = useState(smsTriggerEnabled);
@@ -62,12 +62,13 @@ export const SettingsPanel = ({
 
   // Sync props to local state when they change from external source
   useEffect(() => {
+    console.log('📊 Settings props updated - shake count from props:', shakeCount);
     setLocalMessage(message);
     setLocalTestMessage(testMessage);
     setLocalEmailMessage(emailMessage);
     setLocalTestEmailMessage(testEmailMessage);
     setLocalSensitivity(sensitivity);
-    setLocalShakeCount(shakeCount);
+    setLocalShakeCount(Number(shakeCount));
     setLocalVoiceAlertEnabled(voiceAlertEnabled);
     setLocalVoicePassword(voicePassword);
     setLocalSmsTriggerEnabled(smsTriggerEnabled);

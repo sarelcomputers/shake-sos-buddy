@@ -25,6 +25,7 @@ import { toast } from '@/hooks/use-toast';
 import alfa22Logo from '@/assets/alfa22-logo.png';
 import { Preferences } from '@capacitor/preferences';
 import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { checkBackgroundSOSTrigger } from '@/utils/backgroundRunner';
 import { voiceDetection } from '@/utils/voiceDetection';
@@ -261,8 +262,29 @@ const Index = () => {
         return;
       }
 
+      console.log('🚨 SOS TRIGGERED - Checking permissions...');
+      
+      // Check and request location permissions if needed
+      const permissionStatus = await Geolocation.checkPermissions();
+      console.log('📍 Location permission status:', permissionStatus);
+      
+      if (permissionStatus.location !== 'granted') {
+        console.log('⚠️ Location permission not granted, requesting...');
+        const requestResult = await Geolocation.requestPermissions();
+        console.log('📍 Permission request result:', requestResult);
+        
+        if (requestResult.location !== 'granted') {
+          toast({
+            title: "Permission Required",
+            description: "Location permission is required to send SOS alerts. Please enable it in your device settings.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // Always use enhanced SOS flow with audio, photos, and WiFi capture
-      console.log('🚨 ENHANCED SOS TRIGGERED - Starting 20-second capture process...');
+      console.log('🚨 ENHANCED SOS TRIGGERED - Starting capture process...');
       
       // Send SMS with enhanced data if contacts exist AND SMS trigger is enabled
       if (settings.smsTriggerEnabled && settings.contacts.length > 0) {
@@ -279,9 +301,10 @@ const Index = () => {
         description: "Emergency alerts sent to all contacts",
       });
     } catch (error) {
+      console.error('❌ SOS Error:', error);
       toast({
         title: "Failed to send SOS",
-        description: "Please check your permissions and try again",
+        description: error instanceof Error ? error.message : "Please check your permissions and try again",
         variant: "destructive",
       });
     }
@@ -647,21 +670,39 @@ const Index = () => {
             smsTriggerEnabled={settings.smsTriggerEnabled}
             cooldownPeriod={settings.cooldownPeriod}
             onSaveSettings={async (newSettings) => {
-              await updateMessage(newSettings.message);
-              await updateTestMessage(newSettings.testMessage);
-              await updateEmailMessage(newSettings.emailMessage);
-              await updateTestEmailMessage(newSettings.testEmailMessage);
-              await updateSensitivity(newSettings.sensitivity);
-              await updateShakeCount(newSettings.shakeCount);
-              await updateVoiceAlertEnabled(newSettings.voiceAlertEnabled);
-              await updateVoicePassword(newSettings.voicePassword);
-              await updateSmsTriggerEnabled(newSettings.smsTriggerEnabled);
-              await updateCooldownPeriod(newSettings.cooldownPeriod);
-              
-              toast({
-                title: "Settings Saved",
-                description: "Your settings have been saved successfully",
-              });
+              try {
+                console.log('💾 Saving all settings:', newSettings);
+                
+                // Convert numbers and save
+                await updateMessage(newSettings.message);
+                await updateTestMessage(newSettings.testMessage);
+                await updateEmailMessage(newSettings.emailMessage);
+                await updateTestEmailMessage(newSettings.testEmailMessage);
+                await updateSensitivity(Number(newSettings.sensitivity));
+                
+                const shakeCountValue = Number(newSettings.shakeCount);
+                console.log('🔢 Saving shake count value:', shakeCountValue, 'Type:', typeof shakeCountValue);
+                await updateShakeCount(shakeCountValue);
+                
+                await updateVoiceAlertEnabled(newSettings.voiceAlertEnabled);
+                await updateVoicePassword(newSettings.voicePassword);
+                await updateSmsTriggerEnabled(newSettings.smsTriggerEnabled);
+                await updateCooldownPeriod(Number(newSettings.cooldownPeriod));
+                
+                console.log('✅ All settings saved successfully');
+                
+                toast({
+                  title: "Settings Saved",
+                  description: "Your settings have been saved successfully",
+                });
+              } catch (error) {
+                console.error('❌ Error saving settings:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to save settings. Please try again.",
+                  variant: "destructive",
+                });
+              }
             }}
           />
           </TabsContent>
