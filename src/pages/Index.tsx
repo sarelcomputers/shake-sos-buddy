@@ -645,28 +645,35 @@ const Index = () => {
               }}
             />
             
-            <SettingsPanel
-              message={settings.message}
-              testMessage={settings.testMessage}
-              emailMessage={settings.emailMessage}
-              testEmailMessage={settings.testEmailMessage}
-              sensitivity={settings.sensitivity}
-              shakeCount={settings.shakeCount}
-              voiceAlertEnabled={settings.voiceAlertEnabled}
-              voicePassword={settings.voicePassword}
-              smsTriggerEnabled={settings.smsTriggerEnabled}
-              cooldownPeriod={settings.cooldownPeriod}
-              onMessageChange={updateMessage}
-              onTestMessageChange={updateTestMessage}
-              onEmailMessageChange={updateEmailMessage}
-              onTestEmailMessageChange={updateTestEmailMessage}
-              onSensitivityChange={updateSensitivity}
-              onShakeCountChange={updateShakeCount}
-              onVoiceAlertEnabledChange={updateVoiceAlertEnabled}
-              onVoicePasswordChange={updateVoicePassword}
-              onSmsTriggerEnabledChange={updateSmsTriggerEnabled}
-              onCooldownPeriodChange={updateCooldownPeriod}
-            />
+          <SettingsPanel
+            message={settings.message}
+            testMessage={settings.testMessage}
+            emailMessage={settings.emailMessage}
+            testEmailMessage={settings.testEmailMessage}
+            sensitivity={settings.sensitivity}
+            shakeCount={settings.shakeCount}
+            voiceAlertEnabled={settings.voiceAlertEnabled}
+            voicePassword={settings.voicePassword}
+            smsTriggerEnabled={settings.smsTriggerEnabled}
+            cooldownPeriod={settings.cooldownPeriod}
+            onSaveSettings={async (newSettings) => {
+              await updateMessage(newSettings.message);
+              await updateTestMessage(newSettings.testMessage);
+              await updateEmailMessage(newSettings.emailMessage);
+              await updateTestEmailMessage(newSettings.testEmailMessage);
+              await updateSensitivity(newSettings.sensitivity);
+              await updateShakeCount(newSettings.shakeCount);
+              await updateVoiceAlertEnabled(newSettings.voiceAlertEnabled);
+              await updateVoicePassword(newSettings.voicePassword);
+              await updateSmsTriggerEnabled(newSettings.smsTriggerEnabled);
+              await updateCooldownPeriod(newSettings.cooldownPeriod);
+              
+              toast({
+                title: "Settings Saved",
+                description: "Your settings have been saved successfully",
+              });
+            }}
+          />
           </TabsContent>
 
           <TabsContent value="personal" className="space-y-4 mt-6">

@@ -1,11 +1,13 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MessageSquare, Gauge, Hash, Volume2, AlertCircle, Shield, Mail } from 'lucide-react';
+import { MessageSquare, Gauge, Hash, Volume2, AlertCircle, Shield, Mail, Save } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
 interface SettingsPanelProps {
   message: string;
@@ -18,16 +20,18 @@ interface SettingsPanelProps {
   voicePassword: string;
   smsTriggerEnabled: boolean;
   cooldownPeriod: number;
-  onMessageChange: (message: string) => void;
-  onTestMessageChange: (message: string) => void;
-  onEmailMessageChange: (message: string) => void;
-  onTestEmailMessageChange: (message: string) => void;
-  onSensitivityChange: (sensitivity: number) => void;
-  onShakeCountChange: (count: number) => void;
-  onVoiceAlertEnabledChange: (enabled: boolean) => void;
-  onVoicePasswordChange: (password: string) => void;
-  onSmsTriggerEnabledChange: (enabled: boolean) => void;
-  onCooldownPeriodChange: (period: number) => void;
+  onSaveSettings: (settings: {
+    message: string;
+    testMessage: string;
+    emailMessage: string;
+    testEmailMessage: string;
+    sensitivity: number;
+    shakeCount: number;
+    voiceAlertEnabled: boolean;
+    voicePassword: string;
+    smsTriggerEnabled: boolean;
+    cooldownPeriod: number;
+  }) => void;
 }
 
 export const SettingsPanel = ({
@@ -41,17 +45,67 @@ export const SettingsPanel = ({
   voicePassword,
   smsTriggerEnabled,
   cooldownPeriod,
-  onMessageChange,
-  onTestMessageChange,
-  onEmailMessageChange,
-  onTestEmailMessageChange,
-  onSensitivityChange,
-  onShakeCountChange,
-  onVoiceAlertEnabledChange,
-  onVoicePasswordChange,
-  onSmsTriggerEnabledChange,
-  onCooldownPeriodChange,
+  onSaveSettings,
 }: SettingsPanelProps) => {
+  // Local state for unsaved changes
+  const [localMessage, setLocalMessage] = useState(message);
+  const [localTestMessage, setLocalTestMessage] = useState(testMessage);
+  const [localEmailMessage, setLocalEmailMessage] = useState(emailMessage);
+  const [localTestEmailMessage, setLocalTestEmailMessage] = useState(testEmailMessage);
+  const [localSensitivity, setLocalSensitivity] = useState(sensitivity);
+  const [localShakeCount, setLocalShakeCount] = useState(shakeCount);
+  const [localVoiceAlertEnabled, setLocalVoiceAlertEnabled] = useState(voiceAlertEnabled);
+  const [localVoicePassword, setLocalVoicePassword] = useState(voicePassword);
+  const [localSmsTriggerEnabled, setLocalSmsTriggerEnabled] = useState(smsTriggerEnabled);
+  const [localCooldownPeriod, setLocalCooldownPeriod] = useState(cooldownPeriod);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Sync props to local state when they change from external source
+  useEffect(() => {
+    setLocalMessage(message);
+    setLocalTestMessage(testMessage);
+    setLocalEmailMessage(emailMessage);
+    setLocalTestEmailMessage(testEmailMessage);
+    setLocalSensitivity(sensitivity);
+    setLocalShakeCount(shakeCount);
+    setLocalVoiceAlertEnabled(voiceAlertEnabled);
+    setLocalVoicePassword(voicePassword);
+    setLocalSmsTriggerEnabled(smsTriggerEnabled);
+    setLocalCooldownPeriod(cooldownPeriod);
+  }, [message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, voiceAlertEnabled, voicePassword, smsTriggerEnabled, cooldownPeriod]);
+
+  // Check for unsaved changes
+  useEffect(() => {
+    const changed = 
+      localMessage !== message ||
+      localTestMessage !== testMessage ||
+      localEmailMessage !== emailMessage ||
+      localTestEmailMessage !== testEmailMessage ||
+      localSensitivity !== sensitivity ||
+      localShakeCount !== shakeCount ||
+      localVoiceAlertEnabled !== voiceAlertEnabled ||
+      localVoicePassword !== voicePassword ||
+      localSmsTriggerEnabled !== smsTriggerEnabled ||
+      localCooldownPeriod !== cooldownPeriod;
+    
+    setHasUnsavedChanges(changed);
+  }, [localMessage, localTestMessage, localEmailMessage, localTestEmailMessage, localSensitivity, localShakeCount, localVoiceAlertEnabled, localVoicePassword, localSmsTriggerEnabled, localCooldownPeriod, message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, voiceAlertEnabled, voicePassword, smsTriggerEnabled, cooldownPeriod]);
+
+  const handleSave = () => {
+    onSaveSettings({
+      message: localMessage,
+      testMessage: localTestMessage,
+      emailMessage: localEmailMessage,
+      testEmailMessage: localTestEmailMessage,
+      sensitivity: localSensitivity,
+      shakeCount: localShakeCount,
+      voiceAlertEnabled: localVoiceAlertEnabled,
+      voicePassword: localVoicePassword,
+      smsTriggerEnabled: localSmsTriggerEnabled,
+      cooldownPeriod: localCooldownPeriod,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="text-xl font-bold text-foreground">Settings</h3>
@@ -72,8 +126,8 @@ export const SettingsPanel = ({
               </div>
               <Switch
                 id="smsTrigger"
-                checked={smsTriggerEnabled}
-                onCheckedChange={onSmsTriggerEnabledChange}
+                checked={localSmsTriggerEnabled}
+                onCheckedChange={setLocalSmsTriggerEnabled}
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -91,15 +145,15 @@ export const SettingsPanel = ({
               </div>
               <Switch
                 id="voiceAlert"
-                checked={voiceAlertEnabled}
-                onCheckedChange={onVoiceAlertEnabledChange}
+                checked={localVoiceAlertEnabled}
+                onCheckedChange={setLocalVoiceAlertEnabled}
               />
             </div>
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
                 Enable voice activation for SOS alerts
               </p>
-              {voiceAlertEnabled && (
+              {localVoiceAlertEnabled && (
                 <div className="flex items-start gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md">
                   <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-amber-600 dark:text-amber-400">
@@ -109,7 +163,7 @@ export const SettingsPanel = ({
               )}
             </div>
             
-            {voiceAlertEnabled && (
+            {localVoiceAlertEnabled && (
               <div className="space-y-3 pt-2 border-t">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="voicePassword" className="text-sm font-medium">
@@ -119,8 +173,8 @@ export const SettingsPanel = ({
                 <Input
                   id="voicePassword"
                   type="text"
-                  value={voicePassword}
-                  onChange={(e) => onVoicePasswordChange(e.target.value)}
+                  value={localVoicePassword}
+                  onChange={(e) => setLocalVoicePassword(e.target.value)}
                   placeholder="e.g., help me now"
                   className="w-full"
                 />
@@ -140,8 +194,8 @@ export const SettingsPanel = ({
             </div>
             <Textarea
               id="message"
-              value={message}
-              onChange={(e) => onMessageChange(e.target.value)}
+              value={localMessage}
+              onChange={(e) => setLocalMessage(e.target.value)}
               placeholder="Enter your emergency SMS message..."
               className="min-h-[100px] resize-none"
             />
@@ -159,8 +213,8 @@ export const SettingsPanel = ({
             </div>
             <Textarea
               id="testMessage"
-              value={testMessage}
-              onChange={(e) => onTestMessageChange(e.target.value)}
+              value={localTestMessage}
+              onChange={(e) => setLocalTestMessage(e.target.value)}
               placeholder="Enter your test SMS message..."
               className="min-h-[100px] resize-none"
             />
@@ -178,8 +232,8 @@ export const SettingsPanel = ({
             </div>
             <Textarea
               id="emailMessage"
-              value={emailMessage}
-              onChange={(e) => onEmailMessageChange(e.target.value)}
+              value={localEmailMessage}
+              onChange={(e) => setLocalEmailMessage(e.target.value)}
               placeholder="Enter your emergency email message..."
               className="min-h-[100px] resize-none"
             />
@@ -197,8 +251,8 @@ export const SettingsPanel = ({
             </div>
             <Textarea
               id="testEmailMessage"
-              value={testEmailMessage}
-              onChange={(e) => onTestEmailMessageChange(e.target.value)}
+              value={localTestEmailMessage}
+              onChange={(e) => setLocalTestEmailMessage(e.target.value)}
               placeholder="Enter your test email message..."
               className="min-h-[100px] resize-none"
             />
@@ -211,13 +265,13 @@ export const SettingsPanel = ({
             <div className="flex items-center gap-2">
               <Gauge className="w-5 h-5 text-primary" />
               <Label htmlFor="sensitivity" className="text-base font-semibold">
-                Shake Sensitivity: {35 - sensitivity}
+                Shake Sensitivity: {35 - localSensitivity}
               </Label>
             </div>
             <Slider
               id="sensitivity"
-              value={[35 - sensitivity]}
-              onValueChange={([value]) => onSensitivityChange(35 - value)}
+              value={[35 - localSensitivity]}
+              onValueChange={([value]) => setLocalSensitivity(35 - value)}
               min={5}
               max={30}
               step={1}
@@ -239,8 +293,8 @@ export const SettingsPanel = ({
             <Input
               id="shakeCount"
               type="number"
-              value={shakeCount}
-              onChange={(e) => onShakeCountChange(parseInt(e.target.value) || 5)}
+              value={localShakeCount}
+              onChange={(e) => setLocalShakeCount(parseInt(e.target.value) || 5)}
               onFocus={(e) => e.target.select()}
               min={2}
               max={10}
@@ -255,13 +309,13 @@ export const SettingsPanel = ({
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5 text-primary" />
               <Label htmlFor="cooldownPeriod" className="text-base font-semibold">
-                Alert Cooldown: {cooldownPeriod}s
+                Alert Cooldown: {localCooldownPeriod}s
               </Label>
             </div>
             <Slider
               id="cooldownPeriod"
-              value={[cooldownPeriod]}
-              onValueChange={([value]) => onCooldownPeriodChange(value)}
+              value={[localCooldownPeriod]}
+              onValueChange={([value]) => setLocalCooldownPeriod(value)}
               min={0}
               max={300}
               step={15}
@@ -276,6 +330,21 @@ export const SettingsPanel = ({
             </p>
           </div>
 
+          {hasUnsavedChanges && (
+            <div className="pt-6 border-t">
+              <Button 
+                onClick={handleSave}
+                className="w-full"
+                size="lg"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Settings
+              </Button>
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                You have unsaved changes
+              </p>
+            </div>
+          )}
         </Card>
       </motion.div>
     </div>
