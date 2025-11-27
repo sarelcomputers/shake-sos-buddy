@@ -113,11 +113,14 @@ export const useSOSSettings = () => {
           testWhatsAppMessage: data.test_whatsapp_message || DEFAULT_SETTINGS.testWhatsAppMessage,
           telegramMessage: data.telegram_message || DEFAULT_SETTINGS.telegramMessage,
           testTelegramMessage: data.test_telegram_message || DEFAULT_SETTINGS.testTelegramMessage,
-          sensitivity: parseInt(data.shake_sensitivity) || 15,
-          shakeCount: 5,
-          voiceAlertEnabled: data.voice_alert_enabled ?? true,
-          voicePassword: data.voice_password || '',
-          smsTriggerEnabled: data.sms_trigger_enabled ?? true,
+          sensitivity: parseInt(data.shake_sensitivity) || DEFAULT_SETTINGS.sensitivity,
+          // Use persisted values when available, otherwise fall back to defaults
+          shakeCount: typeof data.shake_count === 'number' ? data.shake_count : DEFAULT_SETTINGS.shakeCount,
+          cooldownPeriod: typeof data.cooldown_period === 'number' ? data.cooldown_period : DEFAULT_SETTINGS.cooldownPeriod,
+          voiceAlertEnabled: data.voice_alert_enabled ?? DEFAULT_SETTINGS.voiceAlertEnabled,
+          voicePassword: data.voice_password || DEFAULT_SETTINGS.voicePassword,
+          smsTriggerEnabled: data.sms_trigger_enabled ?? DEFAULT_SETTINGS.smsTriggerEnabled,
+          enabled: data.enabled ?? DEFAULT_SETTINGS.enabled,
         }));
       }
     } catch (error) {
@@ -210,26 +213,32 @@ export const useSOSSettings = () => {
   const saveSettings = async (newSettings: Partial<SOSSettings>) => {
     if (!user) return;
 
-    const updated = { ...settings, ...newSettings };
+    const updated: SOSSettings = { ...settings, ...newSettings };
     setSettings(updated);
 
     try {
+      const payload = {
+        message: updated.message,
+        test_message: updated.testMessage,
+        email_message: updated.emailMessage,
+        test_email_message: updated.testEmailMessage,
+        test_whatsapp_message: updated.testWhatsAppMessage,
+        telegram_message: updated.telegramMessage,
+        test_telegram_message: updated.testTelegramMessage,
+        shake_sensitivity: updated.sensitivity.toString(),
+        voice_alert_enabled: updated.voiceAlertEnabled,
+        voice_password: updated.voicePassword,
+        sms_trigger_enabled: updated.smsTriggerEnabled,
+        // Newly persisted fields
+        shake_count: updated.shakeCount,
+        cooldown_period: updated.cooldownPeriod,
+        enabled: updated.enabled,
+        user_id: user.id,
+      };
+
       const { error } = await supabase
         .from('sos_settings')
-        .update({
-          message: updated.message,
-          test_message: updated.testMessage,
-          email_message: updated.emailMessage,
-          test_email_message: updated.testEmailMessage,
-          test_whatsapp_message: updated.testWhatsAppMessage,
-          telegram_message: updated.telegramMessage,
-          test_telegram_message: updated.testTelegramMessage,
-          shake_sensitivity: updated.sensitivity.toString(),
-          voice_alert_enabled: updated.voiceAlertEnabled,
-          voice_password: updated.voicePassword,
-          sms_trigger_enabled: updated.smsTriggerEnabled,
-        })
-        .eq('user_id', user.id);
+        .upsert(payload, { onConflict: 'user_id' });
 
       if (error) throw error;
     } catch (error) {
