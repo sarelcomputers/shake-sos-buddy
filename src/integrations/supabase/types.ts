@@ -398,9 +398,12 @@ export type Database = {
       }
       sos_settings: {
         Row: {
+          cooldown_period: number
           email_message: string
+          enabled: boolean
           id: string
           message: string
+          shake_count: number
           shake_sensitivity: string
           sms_trigger_enabled: boolean
           telegram_message: string | null
@@ -414,9 +417,12 @@ export type Database = {
           voice_password: string | null
         }
         Insert: {
+          cooldown_period?: number
           email_message?: string
+          enabled?: boolean
           id?: string
           message?: string
+          shake_count?: number
           shake_sensitivity?: string
           sms_trigger_enabled?: boolean
           telegram_message?: string | null
@@ -430,9 +436,12 @@ export type Database = {
           voice_password?: string | null
         }
         Update: {
+          cooldown_period?: number
           email_message?: string
+          enabled?: boolean
           id?: string
           message?: string
+          shake_count?: number
           shake_sensitivity?: string
           sms_trigger_enabled?: boolean
           telegram_message?: string | null
