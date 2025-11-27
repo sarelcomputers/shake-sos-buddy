@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SOSStatus } from '@/components/SOSStatus';
+import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { ContactList } from '@/components/ContactList';
 import { EmailContactList, type EmailContact } from '@/components/EmailContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
@@ -34,7 +35,7 @@ import { voiceDetection } from '@/utils/voiceDetection';
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { hasAccess, loading: subscriptionLoading } = useSubscription();
+  const { hasAccess, loading: subscriptionLoading, subscription } = useSubscription();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
   const {
     settings,
@@ -603,6 +604,12 @@ const Index = () => {
           enabled={settings.enabled}
           shakeCount={shakeCount}
           requiredShakes={settings.shakeCount}
+        />
+
+        {/* Subscription Status */}
+        <SubscriptionStatus
+          subscription={subscription}
+          loading={subscriptionLoading}
         />
 
         {/* Tabs */}
