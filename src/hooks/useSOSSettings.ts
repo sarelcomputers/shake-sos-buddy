@@ -210,6 +210,41 @@ export const useSOSSettings = () => {
     }
   };
 
+  const saveAllSettings = async (completeSettings: SOSSettings) => {
+    if (!user) return;
+
+    setSettings(completeSettings);
+
+    try {
+      const payload = {
+        message: completeSettings.message,
+        test_message: completeSettings.testMessage,
+        email_message: completeSettings.emailMessage,
+        test_email_message: completeSettings.testEmailMessage,
+        test_whatsapp_message: completeSettings.testWhatsAppMessage,
+        telegram_message: completeSettings.telegramMessage,
+        test_telegram_message: completeSettings.testTelegramMessage,
+        shake_sensitivity: completeSettings.sensitivity.toString(),
+        voice_alert_enabled: completeSettings.voiceAlertEnabled,
+        voice_password: completeSettings.voicePassword,
+        sms_trigger_enabled: completeSettings.smsTriggerEnabled,
+        shake_count: completeSettings.shakeCount,
+        cooldown_period: completeSettings.cooldownPeriod,
+        enabled: completeSettings.enabled,
+        user_id: user.id,
+      };
+
+      const { error } = await supabase
+        .from('sos_settings')
+        .upsert(payload, { onConflict: 'user_id' });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error('Failed to save settings');
+    }
+  };
+
   const saveSettings = async (newSettings: Partial<SOSSettings>) => {
     if (!user) return;
 
@@ -539,5 +574,6 @@ export const useSOSSettings = () => {
     removeWhatsAppContact,
     addTelegramContact,
     removeTelegramContact,
+    saveAllSettings,
   };
 };

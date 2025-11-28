@@ -55,6 +55,7 @@ const Index = () => {
     removeContact,
     addEmailContact,
     removeEmailContact,
+    saveAllSettings,
   } = useSOSSettings();
 
   const [showAddContact, setShowAddContact] = useState(false);
@@ -665,54 +666,52 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 mt-6">
-          <SettingsPanel
-            message={settings.message}
-            testMessage={settings.testMessage}
-            emailMessage={settings.emailMessage}
-            testEmailMessage={settings.testEmailMessage}
-            sensitivity={settings.sensitivity}
-            shakeCount={settings.shakeCount}
-            voiceAlertEnabled={settings.voiceAlertEnabled}
-            voicePassword={settings.voicePassword}
-            smsTriggerEnabled={settings.smsTriggerEnabled}
-            cooldownPeriod={settings.cooldownPeriod}
-            onSaveSettings={async (newSettings) => {
-              try {
-                console.log('💾 Saving all settings:', newSettings);
-                
-                // Convert numbers and save
-                await updateMessage(newSettings.message);
-                await updateTestMessage(newSettings.testMessage);
-                await updateEmailMessage(newSettings.emailMessage);
-                await updateTestEmailMessage(newSettings.testEmailMessage);
-                await updateSensitivity(Number(newSettings.sensitivity));
-                
-                const shakeCountValue = Number(newSettings.shakeCount);
-                console.log('🔢 Saving shake count value:', shakeCountValue, 'Type:', typeof shakeCountValue);
-                await updateShakeCount(shakeCountValue);
-                
-                await updateVoiceAlertEnabled(newSettings.voiceAlertEnabled);
-                await updateVoicePassword(newSettings.voicePassword);
-                await updateSmsTriggerEnabled(newSettings.smsTriggerEnabled);
-                await updateCooldownPeriod(Number(newSettings.cooldownPeriod));
-                
-                console.log('✅ All settings saved successfully');
-                
-                toast({
-                  title: "Settings Saved",
-                  description: "Your settings have been saved successfully",
-                });
-              } catch (error) {
-                console.error('❌ Error saving settings:', error);
-                toast({
-                  title: "Error",
-                  description: "Failed to save settings. Please try again.",
-                  variant: "destructive",
-                });
-              }
-            }}
-          />
-          </TabsContent>
+           <SettingsPanel
+             message={settings.message}
+             testMessage={settings.testMessage}
+             emailMessage={settings.emailMessage}
+             testEmailMessage={settings.testEmailMessage}
+             sensitivity={settings.sensitivity}
+             shakeCount={settings.shakeCount}
+             voiceAlertEnabled={settings.voiceAlertEnabled}
+             voicePassword={settings.voicePassword}
+             smsTriggerEnabled={settings.smsTriggerEnabled}
+             cooldownPeriod={settings.cooldownPeriod}
+             onSaveSettings={async (newSettings) => {
+               try {
+                 console.log('💾 Saving all settings in one operation:', newSettings);
+
+                 await saveAllSettings({
+                   ...settings,
+                   message: newSettings.message,
+                   testMessage: newSettings.testMessage,
+                   emailMessage: newSettings.emailMessage,
+                   testEmailMessage: newSettings.testEmailMessage,
+                   sensitivity: Number(newSettings.sensitivity),
+                   shakeCount: Number(newSettings.shakeCount),
+                   voiceAlertEnabled: newSettings.voiceAlertEnabled,
+                   voicePassword: newSettings.voicePassword,
+                   smsTriggerEnabled: newSettings.smsTriggerEnabled,
+                   cooldownPeriod: Number(newSettings.cooldownPeriod),
+                 });
+
+                 console.log('✅ All settings saved successfully');
+
+                 toast({
+                   title: "Settings Saved",
+                   description: "Your settings have been saved successfully",
+                 });
+               } catch (error) {
+                 console.error('❌ Error saving settings:', error);
+                 toast({
+                   title: "Error",
+                   description: "Failed to save settings. Please try again.",
+                   variant: "destructive",
+                 });
+               }
+             }}
+           />
+           </TabsContent>
 
           <TabsContent value="personal" className="space-y-4 mt-6">
             <PersonalInformation />
