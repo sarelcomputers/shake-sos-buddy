@@ -4,7 +4,11 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.5cb83c0c55a84b36a981495f8680a735',
   appName: 'Alfa22 SOS',
   webDir: 'dist',
-     plugins: {
+  server: {
+    url: 'https://5cb83c0c-55a8-4b36-a981-495f8680a735.lovableproject.com?forceHideBadge=true',
+    cleartext: true
+  }, 
+    plugins: {
     KeepAwake: {
       enabled: true
         SmsManager: {
