@@ -70,19 +70,44 @@ const Index = () => {
     }
   }, []);
 
-  // Check for background SOS triggers when app is reopened
+  // Listen for service worker SOS triggers (PWA background)
   useEffect(() => {
-    if (!settings.enabled || !Capacitor.isNativePlatform()) return;
-    
-    const checkInterval = setInterval(async () => {
-      const shouldTrigger = await checkBackgroundSOSTrigger();
-      if (shouldTrigger) {
-        console.log('Background runner triggered SOS!');
+    const handleServiceWorkerSOS = async () => {
+      console.log('🚨 Service worker triggered SOS!');
+      if (settings.enabled) {
         await handleSOS();
       }
-    }, 2000); // Check every 2 seconds
+    };
+
+    window.addEventListener('sw-sos-trigger', handleServiceWorkerSOS);
+    return () => window.removeEventListener('sw-sos-trigger', handleServiceWorkerSOS);
+  }, [settings.enabled]);
+
+  // Communicate armed state to service worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: settings.enabled ? 'ARM_SYSTEM' : 'DISARM_SYSTEM',
+      });
+    }
+  }, [settings.enabled]);
+
+  // Check for background SOS triggers when app is reopened
+  useEffect(() => {
+    if (!settings.enabled) return;
     
-    return () => clearInterval(checkInterval);
+    // For native apps, check background runner
+    if (Capacitor.isNativePlatform()) {
+      const checkInterval = setInterval(async () => {
+        const shouldTrigger = await checkBackgroundSOSTrigger();
+        if (shouldTrigger) {
+          console.log('Background runner triggered SOS!');
+          await handleSOS();
+        }
+      }, 2000);
+      
+      return () => clearInterval(checkInterval);
+    }
   }, [settings.enabled]);
 
   // Handle voice detection cleanup and wake lock
@@ -92,13 +117,30 @@ const Index = () => {
     };
   }, []);
 
-  // Keep device awake when voice alert is enabled to allow listening even when screen dims
+  // Keep device awake when system is armed to ensure shake and voice detection work
   useEffect(() => {
     const manageWakeLock = async () => {
-      if (settings.enabled && settings.voiceAlertEnabled && settings.voicePassword) {
+      if (settings.enabled) {
         try {
           await KeepAwake.keepAwake();
-          console.log('✅ Wake lock enabled - device will stay awake for voice detection');
+          console.log('✅ Wake lock enabled - device will stay awake for detection');
+          
+          // Also request screen wake lock for web browsers
+          if ('wakeLock' in navigator) {
+            try {
+              const wakeLock = await (navigator as any).wakeLock.request('screen');
+              console.log('✅ Screen wake lock acquired');
+              
+              // Re-acquire on visibility change
+              document.addEventListener('visibilitychange', async () => {
+                if (document.visibilityState === 'visible' && settings.enabled) {
+                  await (navigator as any).wakeLock.request('screen');
+                }
+              });
+            } catch (err) {
+              console.log('Screen wake lock not available:', err);
+            }
+          }
         } catch (error) {
           console.error('Failed to enable wake lock:', error);
         }
@@ -113,7 +155,7 @@ const Index = () => {
     };
 
     manageWakeLock();
-  }, [settings.enabled, settings.voiceAlertEnabled, settings.voicePassword]);
+  }, [settings.enabled]);
 
   const handlePermissionsComplete = () => {
     localStorage.setItem('permissions_setup_complete', 'true');
@@ -136,6 +178,80 @@ const Index = () => {
     }
 
     const willBeEnabled = !settings.enabled;
+    
+    // If enabling, verify and request all required permissions
+    if (willBeEnabled) {
+      try {
+        // Request location permissions (foreground and background)
+        console.log('🔐 Requesting location permissions...');
+        const locationPermission = await Geolocation.requestPermissions();
+        
+        if (locationPermission.location !== 'granted' && locationPermission.coarseLocation !== 'granted') {
+          toast({
+            title: "Location Required",
+            description: "Location permission is required for SOS alerts. Please enable it in settings.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        // Verify location is working with high accuracy
+        try {
+          const testPosition = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 10000,
+          });
+          console.log('✅ Location verified:', testPosition.coords.latitude, testPosition.coords.longitude);
+        } catch (locError) {
+          console.warn('⚠️ Location test failed, but permissions granted:', locError);
+        }
+        
+        // Request motion sensor permission (iOS 13+)
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof (DeviceMotionEvent as any).requestPermission === 'function') {
+          try {
+            const motionPermission = await (DeviceMotionEvent as any).requestPermission();
+            if (motionPermission !== 'granted') {
+              toast({
+                title: "Motion Sensor Required",
+                description: "Motion sensor permission is needed for shake detection.",
+                variant: "destructive",
+              });
+              return;
+            }
+            console.log('✅ Motion sensor permission granted');
+          } catch (motionError) {
+            console.error('Motion permission error:', motionError);
+          }
+        }
+        
+        // Request microphone for voice detection if enabled
+        if (settings.voiceAlertEnabled && settings.voicePassword) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            console.log('✅ Microphone permission granted');
+          } catch (micError) {
+            console.warn('⚠️ Microphone permission failed - voice detection disabled:', micError);
+          }
+        }
+        
+        // Request notification permission for PWA
+        if ('Notification' in window && Notification.permission === 'default') {
+          await Notification.requestPermission();
+        }
+        
+        console.log('✅ All permissions verified - arming system');
+      } catch (error) {
+        console.error('❌ Permission error:', error);
+        toast({
+          title: "Permission Error",
+          description: "Could not verify permissions. Please check your device settings.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     toggleEnabled();
     
     // Store armed state for background runner
