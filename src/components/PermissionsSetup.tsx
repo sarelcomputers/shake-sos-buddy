@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { SmsManager } from '@byteowls/capacitor-sms';
 import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Smartphone, Battery, CheckCircle, AlertCircle, Mic, Camera, Users } from 'lucide-react';
+import { MessageSquare, Smartphone, Battery, CheckCircle, AlertCircle, Mic, Camera, Users, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PermissionStatus {
+  location: 'pending' | 'granted' | 'denied';
   microphone: 'pending' | 'granted' | 'denied';
   camera: 'pending' | 'granted' | 'denied';
   contacts: 'pending' | 'granted' | 'denied';
@@ -17,6 +19,7 @@ interface PermissionStatus {
 
 export const PermissionsSetup = ({ onComplete }: { onComplete: () => void }) => {
   const [permissions, setPermissions] = useState<PermissionStatus>({
+    location: 'pending',
     microphone: 'pending',
     camera: 'pending',
     contacts: 'pending',
@@ -28,6 +31,66 @@ export const PermissionsSetup = ({ onComplete }: { onComplete: () => void }) => 
   const isNative = Capacitor.isNativePlatform();
 
   const steps = [
+    {
+      id: 'location',
+      icon: MapPin,
+      title: 'Location Access',
+      description: 'Essential for SOS alerts. Allows the app to share your precise location with emergency contacts, including background tracking when you trigger an alert. Your location is only shared during emergencies.',
+      action: async () => {
+        try {
+          // Request location permissions - this will prompt for foreground access
+          const permissionStatus = await Geolocation.requestPermissions();
+          console.log('Location permission status:', permissionStatus);
+          
+          if (permissionStatus.location === 'granted' || permissionStatus.coarseLocation === 'granted') {
+            // Try to get current position to verify precise location works
+            try {
+              const position = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 10000,
+              });
+              console.log('Location verified:', position.coords.latitude, position.coords.longitude);
+              setPermissions(prev => ({ ...prev, location: 'granted' }));
+              toast.success('Location permission granted with precise tracking');
+              return true;
+            } catch (posError) {
+              console.warn('Could not verify location, but permission granted:', posError);
+              setPermissions(prev => ({ ...prev, location: 'granted' }));
+              toast.success('Location permission granted');
+              return true;
+            }
+          } else {
+            setPermissions(prev => ({ ...prev, location: 'denied' }));
+            toast.error('Location permission denied - SOS alerts require location access');
+            return false;
+          }
+        } catch (error) {
+          console.error('Location permission error:', error);
+          // On web, try the browser geolocation API
+          if (!isNative && navigator.geolocation) {
+            return new Promise((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  setPermissions(prev => ({ ...prev, location: 'granted' }));
+                  toast.success('Location permission granted');
+                  resolve(true);
+                },
+                (error) => {
+                  console.error('Browser geolocation error:', error);
+                  setPermissions(prev => ({ ...prev, location: 'denied' }));
+                  toast.error('Location permission denied');
+                  resolve(false);
+                },
+                { enableHighAccuracy: true }
+              );
+            });
+          }
+          setPermissions(prev => ({ ...prev, location: 'denied' }));
+          toast.error('Location permission denied');
+          return false;
+        }
+      },
+    },
     {
       id: 'microphone',
       icon: Mic,
