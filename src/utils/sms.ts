@@ -6,6 +6,55 @@ import { startLocationTracking, generateTrackingUrl } from './locationTracking';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { captureSimplifiedSOSData } from './enhancedSOS';
 import { cameraCapture } from './cameraCapture';
+import { SmsManager } from '@byteowls/capacitor-sms';
+
+// Format phone number for South Africa (+27)
+const formatSAPhoneNumber = (phone: string): string => {
+  // Remove all non-numeric characters except +
+  let cleaned = phone.replace(/[^\d+]/g, '');
+  
+  // If starts with 0, replace with +27
+  if (cleaned.startsWith('0')) {
+    cleaned = '+27' + cleaned.substring(1);
+  }
+  // If doesn't start with +, assume it needs +27
+  else if (!cleaned.startsWith('+')) {
+    cleaned = '+27' + cleaned;
+  }
+  
+  return cleaned;
+};
+
+// Send SMS via device native carrier
+const sendNativeSMS = async (
+  phoneNumbers: string[],
+  message: string
+): Promise<{ successful: string[]; failed: string[] }> => {
+  const successful: string[] = [];
+  const failed: string[] = [];
+  
+  // Format all phone numbers for SA
+  const formattedNumbers = phoneNumbers.map(formatSAPhoneNumber);
+  
+  try {
+    // Check if SMS is available on this device
+    const result = await SmsManager.send({
+      numbers: formattedNumbers,
+      text: message,
+    });
+    
+    console.log('SMS send result:', result);
+    
+    // If we get here without error, consider all successful
+    formattedNumbers.forEach(num => successful.push(num));
+  } catch (error) {
+    console.error('Error sending native SMS:', error);
+    // Mark all as failed if bulk send fails
+    formattedNumbers.forEach(num => failed.push(num));
+  }
+  
+  return { successful, failed };
+};
 
 export const sendSOSMessages = async (
   message: string,
@@ -122,32 +171,19 @@ export const sendSOSMessages = async (
     
     const fullMessage = `${message}\n\n📍 Location: ${locationUrl}\n\n🔴 Live Tracking (5min): ${trackingUrl}${photoUrl ? `\n\n📷 Photo: ${photoUrl}` : ''}${personalInfoText}\n\n📡 Nearby WiFi: ${simplifiedData.wifiNames}`;
     
-    console.log('✅ Sending SMS and Email alerts...');
+    console.log('✅ Sending SMS via device carrier and Email alerts...');
     
-    // Send SMS to all contacts
-    const results = await Promise.allSettled(
-      contacts.map(async (contact) => {
-        const response = await supabase.functions.invoke('send-sms-twilio', {
-          body: { 
-            to: contact.phone, 
-            message: fullMessage 
-          }
-        });
-        
-        if (response.error) {
-          console.error(`Error sending SMS to ${contact.name}:`, response.error);
-          throw new Error(`Failed to send to ${contact.name}`);
-        }
-        
-        return contact;
-      })
+    // Send SMS via native device carrier (uses user's SMS bundle)
+    const phoneNumbers = contacts.map(c => c.phone);
+    const smsResult = await sendNativeSMS(phoneNumbers, fullMessage);
+    
+    console.log(`SMS sent: ${smsResult.successful.length} successful, ${smsResult.failed.length} failed`);
+    
+    const successfulContacts = contacts.filter(c => 
+      smsResult.successful.includes(formatSAPhoneNumber(c.phone))
     );
     
-    const successfulContacts = results
-      .filter(result => result.status === 'fulfilled')
-      .map(result => (result as PromiseFulfilledResult<any>).value);
-    
-    const failedCount = results.filter(result => result.status === 'rejected').length;
+    const failedCount = smsResult.failed.length;
     
     if (failedCount > 0) {
       console.warn(`${failedCount} messages failed to send`);
