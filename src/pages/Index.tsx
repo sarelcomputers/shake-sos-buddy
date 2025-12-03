@@ -184,26 +184,53 @@ const Index = () => {
       try {
         // Request location permissions (foreground and background)
         console.log('🔐 Requesting location permissions...');
-        const locationPermission = await Geolocation.requestPermissions();
         
-        if (locationPermission.location !== 'granted' && locationPermission.coarseLocation !== 'granted') {
-          toast({
-            title: "Location Required",
-            description: "Location permission is required for SOS alerts. Please enable it in settings.",
-            variant: "destructive",
-          });
-          return;
+        // Handle web vs native differently
+        if (Capacitor.isNativePlatform()) {
+          const locationPermission = await Geolocation.requestPermissions();
+          
+          if (locationPermission.location !== 'granted' && locationPermission.coarseLocation !== 'granted') {
+            toast({
+              title: "Location Required",
+              description: "Location permission is required for SOS alerts. Please enable it in settings.",
+              variant: "destructive",
+            });
+            return;
+          }
+        } else {
+          // For web, try to get location which will trigger the permission prompt
+          try {
+            await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+              });
+            });
+            console.log('✅ Web location permission granted');
+          } catch (geoError: any) {
+            if (geoError?.code === 1) { // PERMISSION_DENIED
+              toast({
+                title: "Location Required",
+                description: "Location permission is required for SOS alerts. Please allow location access.",
+                variant: "destructive",
+              });
+              return;
+            }
+            console.warn('⚠️ Location test failed:', geoError);
+          }
         }
         
-        // Verify location is working with high accuracy
-        try {
-          const testPosition = await Geolocation.getCurrentPosition({
-            enableHighAccuracy: true,
-            timeout: 10000,
-          });
-          console.log('✅ Location verified:', testPosition.coords.latitude, testPosition.coords.longitude);
-        } catch (locError) {
-          console.warn('⚠️ Location test failed, but permissions granted:', locError);
+        // Verify location is working with high accuracy (native only)
+        if (Capacitor.isNativePlatform()) {
+          try {
+            const testPosition = await Geolocation.getCurrentPosition({
+              enableHighAccuracy: true,
+              timeout: 10000,
+            });
+            console.log('✅ Location verified:', testPosition.coords.latitude, testPosition.coords.longitude);
+          } catch (locError) {
+            console.warn('⚠️ Location test failed, but permissions granted:', locError);
+          }
         }
         
         // Request motion sensor permission (iOS 13+)
@@ -382,23 +409,28 @@ const Index = () => {
 
       console.log('🚨 SOS TRIGGERED - Checking permissions...');
       
-      // Check and request location permissions if needed
-      const permissionStatus = await Geolocation.checkPermissions();
-      console.log('📍 Location permission status:', permissionStatus);
-      
-      if (permissionStatus.location !== 'granted') {
-        console.log('⚠️ Location permission not granted, requesting...');
-        const requestResult = await Geolocation.requestPermissions();
-        console.log('📍 Permission request result:', requestResult);
+      // Check and request location permissions if needed (handle web vs native)
+      if (Capacitor.isNativePlatform()) {
+        const permissionStatus = await Geolocation.checkPermissions();
+        console.log('📍 Location permission status:', permissionStatus);
         
-        if (requestResult.location !== 'granted') {
-          toast({
-            title: "Permission Required",
-            description: "Location permission is required to send SOS alerts. Please enable it in your device settings.",
-            variant: "destructive",
-          });
-          return;
+        if (permissionStatus.location !== 'granted') {
+          console.log('⚠️ Location permission not granted, requesting...');
+          const requestResult = await Geolocation.requestPermissions();
+          console.log('📍 Permission request result:', requestResult);
+          
+          if (requestResult.location !== 'granted') {
+            toast({
+              title: "Permission Required",
+              description: "Location permission is required to send SOS alerts. Please enable it in your device settings.",
+              variant: "destructive",
+            });
+            return;
+          }
         }
+      } else {
+        // For web, permissions are checked when getting location
+        console.log('📍 Web platform - location permission will be checked on access');
       }
 
       // Always use enhanced SOS flow with audio, photos, and WiFi capture
