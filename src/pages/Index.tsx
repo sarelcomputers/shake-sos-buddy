@@ -30,6 +30,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { checkBackgroundSOSTrigger } from '@/utils/backgroundRunner';
 import { voiceDetection } from '@/utils/voiceDetection';
+import { startForegroundService, stopForegroundService, isForegroundServiceAvailable } from '@/utils/foregroundService';
 
 
 const Index = () => {
@@ -382,6 +383,23 @@ const Index = () => {
       voiceDetection.stop();
     }
     
+    // Start/stop Android foreground service for true background detection
+    if (Capacitor.getPlatform() === 'android') {
+      if (willBeEnabled) {
+        const serviceStarted = await startForegroundService();
+        if (serviceStarted) {
+          console.log('✅ Android foreground service started for background detection');
+        } else if (isForegroundServiceAvailable()) {
+          console.log('⚠️ Foreground service available but failed to start');
+        } else {
+          console.log('ℹ️ Foreground service not available (native code not installed)');
+        }
+      } else {
+        await stopForegroundService();
+        console.log('🛑 Android foreground service stopped');
+      }
+    }
+    
     if (willBeEnabled) {
       const isNative = Capacitor.isNativePlatform();
       const platform = Capacitor.getPlatform();
@@ -390,11 +408,15 @@ const Index = () => {
         ? ` Voice activation enabled - say "${settings.voicePassword}" to trigger.`
         : '';
       
+      const foregroundMsg = platform === 'android' && isForegroundServiceAvailable()
+        ? ' Background service running with persistent notification.'
+        : '';
+      
       toast({
         title: "System Armed ✓",
         description: isNative 
-          ? `Background monitoring enabled. App will listen for shakes even when closed${platform === 'ios' ? ' (keep app in foreground on iOS)' : ''}.${voiceMsg}`
-          : `Device will stay awake and monitor for shakes even when screen is locked.${voiceMsg}`,
+          ? `Background monitoring enabled.${foregroundMsg}${platform === 'ios' ? ' Keep app in foreground on iOS.' : ''}${voiceMsg}`
+          : `Device will stay awake and monitor for shakes.${voiceMsg}`,
         duration: 6000,
       });
     } else {
