@@ -327,11 +327,12 @@ const Index = () => {
     
     // Handle voice detection
     if (willBeEnabled && settings.voiceAlertEnabled && settings.voicePassword) {
-      console.log('Starting voice detection with password:', settings.voicePassword);
-      voiceDetection.start({
+      console.log('🎤 Starting voice detection with password:', settings.voicePassword);
+      
+      const voiceStarted = await voiceDetection.start({
         password: settings.voicePassword,
         onPasswordDetected: () => {
-          console.log('Voice password detected! Asking for confirmation...');
+          console.log('🔑 Voice password detected! Asking for confirmation...');
           toast({
             title: "Voice Password Detected",
             description: "Say 'yes' to trigger alert or 'no' to cancel",
@@ -340,7 +341,7 @@ const Index = () => {
         onConfirmation: async (confirmed) => {
           console.log('Voice confirmation received:', confirmed);
           if (confirmed) {
-            console.log('User confirmed "yes" - triggering SOS alert...');
+            console.log('✅ User confirmed "yes" - triggering SOS alert...');
             
             // Set cooldown for shake detection (2 minutes)
             const cooldownUntil = Date.now() + (2 * 60 * 1000);
@@ -360,7 +361,7 @@ const Index = () => {
             });
             await handleSOS();
           } else {
-            console.log('User said "no" - cancelling alert');
+            console.log('❌ User said "no" - cancelling alert');
             toast({
               title: "Alert Cancelled",
               description: "Voice alert was cancelled",
@@ -368,8 +369,16 @@ const Index = () => {
           }
         },
       });
+      
+      if (!voiceStarted) {
+        toast({
+          title: "Voice Detection Failed",
+          description: "Could not start voice detection. Please check microphone permissions.",
+          variant: "destructive",
+        });
+      }
     } else if (!willBeEnabled) {
-      console.log('Stopping voice detection');
+      console.log('🛑 Stopping voice detection');
       voiceDetection.stop();
     }
     

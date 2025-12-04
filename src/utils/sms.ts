@@ -1,6 +1,7 @@
 import { Geolocation } from '@capacitor/geolocation';
 import { Device } from '@capacitor/device';
 import { Network } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 import { startLocationTracking, generateTrackingUrl } from './locationTracking';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -33,22 +34,38 @@ const sendNativeSMS = async (
   const successful: string[] = [];
   const failed: string[] = [];
   
+  // Check if we're on a native platform
+  if (!Capacitor.isNativePlatform()) {
+    console.log('📱 Not on native platform, skipping native SMS');
+    phoneNumbers.forEach(num => failed.push(formatSAPhoneNumber(num)));
+    return { successful, failed };
+  }
+  
   // Format all phone numbers for SA
   const formattedNumbers = phoneNumbers.map(formatSAPhoneNumber);
   
   try {
-    // Check if SMS is available on this device
+    console.log('📤 Sending SMS to:', formattedNumbers);
+    
+    // The SmsManager plugin handles permissions internally
+    // On Android, it will request SEND_SMS permission if not granted
     const result = await SmsManager.send({
       numbers: formattedNumbers,
       text: message,
     });
     
-    console.log('SMS send result:', result);
+    console.log('✅ SMS send result:', result);
     
     // If we get here without error, consider all successful
     formattedNumbers.forEach(num => successful.push(num));
-  } catch (error) {
-    console.error('Error sending native SMS:', error);
+  } catch (error: any) {
+    console.error('❌ Error sending native SMS:', error);
+    
+    // Check if it's a permission error
+    if (error?.message?.toLowerCase().includes('permission')) {
+      console.error('📵 SMS permission denied. User needs to grant SMS permission in device settings.');
+    }
+    
     // Mark all as failed if bulk send fails
     formattedNumbers.forEach(num => failed.push(num));
   }
