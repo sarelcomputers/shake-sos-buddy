@@ -330,13 +330,17 @@ const Index = () => {
     if (willBeEnabled && settings.voiceAlertEnabled && settings.voicePassword) {
       console.log('🎤 Starting voice detection with password:', settings.voicePassword);
       
+      // Small delay to ensure previous instance is fully stopped
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const voiceStarted = await voiceDetection.start({
         password: settings.voicePassword,
         onPasswordDetected: () => {
           console.log('🔑 Voice password detected! Asking for confirmation...');
           toast({
-            title: "Voice Password Detected",
-            description: "Say 'yes' to trigger alert or 'no' to cancel",
+            title: "🎤 Voice Password Detected!",
+            description: "Say 'YES' to trigger alert or 'NO' to cancel",
+            duration: 10000,
           });
         },
         onConfirmation: async (confirmed) => {
@@ -357,7 +361,7 @@ const Index = () => {
             }
             
             toast({
-              title: "Voice Confirmed",
+              title: "✅ Voice Confirmed",
               description: "Triggering emergency alert... (Shake detection paused for 2 minutes)",
             });
             await handleSOS();
@@ -371,7 +375,15 @@ const Index = () => {
         },
       });
       
-      if (!voiceStarted) {
+      if (voiceStarted) {
+        console.log('✅ Voice detection successfully started');
+        toast({
+          title: "🎧 Voice Listening Active",
+          description: `Say "${settings.voicePassword}" to trigger SOS`,
+          duration: 5000,
+        });
+      } else {
+        console.error('❌ Voice detection failed to start');
         toast({
           title: "Voice Detection Failed",
           description: "Could not start voice detection. Please check microphone permissions.",

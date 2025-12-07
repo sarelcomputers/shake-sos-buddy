@@ -19,13 +19,23 @@ class VoiceDetection {
   private synth: SpeechSynthesis | null = null;
   private voicesLoaded = false;
   private restartAttempts = 0;
-  private maxRestartAttempts = 50;
+  private maxRestartAttempts = 100;
   private microphoneStream: MediaStream | null = null;
   private isSpeaking = false;
+  private keepAliveInterval: number | null = null;
+  private lastSpeechTime = 0;
+  private debugMode = true;
 
   constructor() {
+    this.log('🔧 VoiceDetection constructor called');
     this.initRecognition();
     this.initSpeechSynthesis();
+  }
+
+  private log(...args: any[]) {
+    if (this.debugMode) {
+      console.log('[VoiceDetection]', ...args);
+    }
   }
 
   private initRecognition() {
@@ -35,34 +45,30 @@ class VoiceDetection {
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
       this.recognition.continuous = true;
-      this.recognition.interimResults = true; // Enable interim results for faster detection
+      this.recognition.interimResults = true;
       this.recognition.lang = 'en-US';
-      this.recognition.maxAlternatives = 3;
+      this.recognition.maxAlternatives = 5;
       this.setupRecognitionHandlers();
-      console.log('✅ Speech recognition initialized');
+      this.log('✅ Speech recognition initialized');
     } else {
-      console.warn('❌ Web Speech API not supported in this browser');
+      console.error('❌ Web Speech API not supported in this browser');
     }
   }
 
   private initSpeechSynthesis() {
-    // Initialize speech synthesis
     if ('speechSynthesis' in window) {
       this.synth = window.speechSynthesis;
       
-      // Load voices
       const loadVoices = () => {
         const voices = this.synth?.getVoices() || [];
         if (voices.length > 0) {
           this.voicesLoaded = true;
-          console.log('✅ Voices loaded:', voices.length);
+          this.log('✅ Voices loaded:', voices.length);
         }
       };
 
-      // Try to load voices immediately
       loadVoices();
 
-      // Also listen for voiceschanged event (needed on some browsers)
       if (this.synth) {
         this.synth.onvoiceschanged = loadVoices;
       }
@@ -73,144 +79,211 @@ class VoiceDetection {
     if (!this.recognition) return;
 
     this.recognition.onresult = (event: any) => {
-      // Check all results, including interim
+      this.lastSpeechTime = Date.now();
+      
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript.toLowerCase().trim();
-        const isFinal = event.results[i].isFinal;
+        const result = event.results[i];
+        const transcript = result[0].transcript.toLowerCase().trim();
+        const confidence = result[0].confidence;
+        const isFinal = result.isFinal;
         
-        console.log(`🎤 Voice detected${isFinal ? ' (final)' : ' (interim)'}:`, transcript);
+        this.log(`🎤 Heard${isFinal ? ' (final)' : ''}:`, `"${transcript}"`, `confidence: ${(confidence * 100).toFixed(1)}%`);
 
         if (this.isAwaitingConfirmation) {
           // Listen for yes/no response
-          if (transcript.includes('yes') || transcript === 'yes' || transcript.includes('yeah')) {
-            console.log('✅ User confirmed "YES" - triggering emergency!');
+          if (transcript.includes('yes') || transcript.includes('yeah') || transcript.includes('yep') || transcript.includes('help')) {
+            this.log('✅ User confirmed - triggering emergency!');
             this.isAwaitingConfirmation = false;
             this.onConfirmation?.(true);
             this.stop();
             return;
-          } else if (transcript.includes('no') || transcript === 'no' || transcript.includes('cancel')) {
-            console.log('❌ User cancelled with "NO"');
+          } else if (transcript.includes('no') || transcript.includes('nope') || transcript.includes('cancel') || transcript.includes('stop')) {
+            this.log('❌ User cancelled');
             this.isAwaitingConfirmation = false;
             this.onConfirmation?.(false);
-            // Continue listening for password
             return;
-          } else if (isFinal) {
-            console.log('⏳ Still waiting for yes/no, heard:', transcript);
           }
         } else {
-          // Listen for password
-          const passwordLower = this.password.toLowerCase();
-          if (transcript.includes(passwordLower) || transcript === passwordLower) {
-            console.log('🔑 Password detected!');
+          // Listen for password - check all alternatives
+          const passwordLower = this.password.toLowerCase().trim();
+          
+          // Check main transcript
+          if (this.matchesPassword(transcript, passwordLower)) {
+            this.log('🔑 Password detected in main transcript!');
             this.handlePasswordDetected();
             return;
+          }
+          
+          // Check all alternatives
+          for (let alt = 0; alt < result.length; alt++) {
+            const altTranscript = result[alt].transcript.toLowerCase().trim();
+            if (this.matchesPassword(altTranscript, passwordLower)) {
+              this.log('🔑 Password detected in alternative:', altTranscript);
+              this.handlePasswordDetected();
+              return;
+            }
           }
         }
       }
     };
 
     this.recognition.onerror = (event: any) => {
-      console.error('❌ Speech recognition error:', event.error);
+      this.log('❌ Recognition error:', event.error);
       
-      // Don't restart if we're not supposed to be listening
       if (!this.isListening) return;
       
-      // Handle different error types
       switch (event.error) {
         case 'no-speech':
-          // This is normal, just restart
-          console.log('👂 No speech detected, restarting...');
-          this.restartRecognition(500);
+          this.log('👂 No speech - continuing to listen...');
+          this.restartRecognition(100);
           break;
         case 'audio-capture':
-          console.error('🎤 Microphone not available, retrying...');
-          this.restartRecognition(2000);
+          this.log('🎤 Audio capture error, retrying...');
+          this.restartRecognition(1000);
           break;
         case 'not-allowed':
           console.error('🚫 Microphone permission denied');
           this.isListening = false;
           break;
         case 'aborted':
-          // Recognition was aborted, restart if still listening
+          this.restartRecognition(100);
+          break;
+        case 'network':
+          this.log('🌐 Network error, retrying...');
           this.restartRecognition(500);
           break;
         default:
-          this.restartRecognition(1000);
+          this.restartRecognition(500);
       }
     };
 
     this.recognition.onend = () => {
-      console.log('🔴 Recognition ended, isListening:', this.isListening, 'isSpeaking:', this.isSpeaking);
+      this.log('🔴 Recognition ended, isListening:', this.isListening, 'isSpeaking:', this.isSpeaking);
       
-      // Restart if we should still be listening and not speaking
       if (this.isListening && !this.isSpeaking) {
-        this.restartRecognition(100);
+        this.restartRecognition(50);
       }
     };
 
     this.recognition.onstart = () => {
-      console.log('🟢 Recognition started - listening for:', this.password || 'password');
+      this.log('🟢 Recognition ACTIVE - listening for password:', `"${this.password}"`);
       this.restartAttempts = 0;
     };
 
     this.recognition.onspeechstart = () => {
-      console.log('🗣️ Speech started');
+      this.log('🗣️ Speech detected');
+      this.lastSpeechTime = Date.now();
     };
 
     this.recognition.onspeechend = () => {
-      console.log('🔇 Speech ended');
+      this.log('🔇 Speech ended');
+    };
+
+    this.recognition.onaudiostart = () => {
+      this.log('🎧 Audio started (microphone active)');
+    };
+
+    this.recognition.onaudioend = () => {
+      this.log('🔌 Audio ended');
     };
   }
 
+  private matchesPassword(transcript: string, password: string): boolean {
+    // Exact match
+    if (transcript === password) return true;
+    
+    // Contains match
+    if (transcript.includes(password)) return true;
+    
+    // Word boundary match (password as a word within transcript)
+    const words = transcript.split(/\s+/);
+    const passwordWords = password.split(/\s+/);
+    
+    // Check if all password words appear in order
+    let passwordIndex = 0;
+    for (const word of words) {
+      if (word === passwordWords[passwordIndex] || word.includes(passwordWords[passwordIndex])) {
+        passwordIndex++;
+        if (passwordIndex >= passwordWords.length) {
+          return true;
+        }
+      }
+    }
+    
+    // Fuzzy match - check if transcript is very similar
+    if (this.levenshteinDistance(transcript, password) <= Math.max(2, password.length * 0.3)) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  private levenshteinDistance(a: string, b: string): number {
+    const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+
+    for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+
+    for (let j = 1; j <= b.length; j++) {
+      for (let i = 1; i <= a.length; i++) {
+        const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + indicator
+        );
+      }
+    }
+
+    return matrix[b.length][a.length];
+  }
+
   private restartRecognition(delay: number = 100) {
-    if (!this.isListening || !this.recognition) return;
+    if (!this.isListening || !this.recognition || this.isSpeaking) return;
     
     if (this.restartAttempts >= this.maxRestartAttempts) {
-      console.log('⚠️ Max restart attempts reached, reinitializing...');
+      this.log('⚠️ Max restarts reached, reinitializing...');
       this.restartAttempts = 0;
-      // Reinitialize recognition
       this.initRecognition();
     }
     
     this.restartAttempts++;
     
     setTimeout(() => {
-      if (this.isListening && !this.isSpeaking) {
+      if (this.isListening && !this.isSpeaking && this.recognition) {
         try {
-          this.recognition?.start();
+          this.recognition.start();
         } catch (e: any) {
           if (e.name !== 'InvalidStateError') {
-            console.error('Failed to restart recognition:', e);
+            this.log('Restart error:', e.message);
           }
-          // If already running, that's fine
         }
       }
     }, delay);
   }
 
   private handlePasswordDetected() {
+    this.log('🎯 PASSWORD MATCHED! Asking for confirmation...');
     this.onPasswordDetected?.();
     this.isAwaitingConfirmation = true;
     
-    // Stop recognition while speaking to avoid feedback
+    // Stop recognition while speaking
     try {
       this.recognition?.stop();
     } catch (e) {}
     
-    // Speak the confirmation prompt
+    // Speak confirmation prompt
     this.speak('Do you need help? Say yes or no.', () => {
-      // After prompt is spoken, resume listening for yes/no
-      console.log('⏳ Waiting for yes or no response...');
+      this.log('⏳ Prompt spoken, waiting for yes/no...');
     });
   }
 
   private speak(text: string, onComplete?: () => void) {
     const isNative = Capacitor.isNativePlatform();
     
-    console.log(`🔊 Speaking: "${text}" (Platform: ${isNative ? 'Native' : 'Web'})`);
+    this.log(`🔊 Speaking: "${text}"`);
     this.isSpeaking = true;
 
-    // For mobile, use enhanced web speech with better settings
     if (isNative) {
       this.speakMobile(text, onComplete);
     } else {
@@ -220,65 +293,49 @@ class VoiceDetection {
 
   private speakMobile(text: string, onComplete?: () => void) {
     if (!this.synth) {
-      console.warn('Speech synthesis not supported');
+      this.log('Speech synthesis not available');
       this.isSpeaking = false;
       this.resumeListening();
       onComplete?.();
       return;
     }
 
-    console.log('🎤 Using mobile-optimized speech synthesis');
-
-    // Cancel any ongoing speech
     this.synth.cancel();
 
-    // Wait a bit to ensure cancellation completed
     setTimeout(() => {
       const voices = this.synth!.getVoices();
-      console.log('📱 Available mobile voices:', voices.length);
-      
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // For mobile, find the best English voice
       const mobileVoice = voices.find(voice => 
         voice.lang.startsWith('en') && 
         (voice.localService || voice.default)
       ) || voices.find(voice => voice.lang.startsWith('en')) || voices[0];
       
       if (mobileVoice) {
-        console.log('Using mobile voice:', mobileVoice.name, mobileVoice.lang);
         utterance.voice = mobileVoice;
       }
       
-      // Mobile-optimized settings
-      utterance.rate = 0.9;  // Slightly slower for clarity
+      utterance.rate = 0.9;
       utterance.pitch = 1.1;
       utterance.volume = 1.0;
       utterance.lang = 'en-US';
 
-      utterance.onstart = () => {
-        console.log('✅ Mobile speech started');
-      };
-
       utterance.onend = () => {
-        console.log('✅ Mobile speech completed');
+        this.log('✅ Speech completed');
         this.isSpeaking = false;
         this.resumeListening();
         onComplete?.();
       };
 
       utterance.onerror = (event) => {
-        console.error('❌ Mobile speech synthesis error:', event);
+        this.log('❌ Speech error:', event.error);
         this.isSpeaking = false;
         this.resumeListening();
         onComplete?.();
       };
 
-      console.log('📢 Speaking on mobile:', text);
-      
-      // Ensure speech synthesis is not paused
-      if (this.synth.paused) {
-        this.synth.resume();
+      if (this.synth!.paused) {
+        this.synth!.resume();
       }
       
       this.synth!.speak(utterance);
@@ -287,71 +344,51 @@ class VoiceDetection {
 
   private speakWeb(text: string, onComplete?: () => void) {
     if (!this.synth) {
-      console.warn('Speech synthesis not supported');
       this.isSpeaking = false;
       this.resumeListening();
       onComplete?.();
       return;
     }
 
-    // Cancel any ongoing speech
     this.synth.cancel();
 
-    // Wait for voices to load if not already loaded
     const speakWhenReady = () => {
       const voices = this.synth!.getVoices();
-      console.log('Available voices:', voices.length);
-      
       const utterance = new SpeechSynthesisUtterance(text);
       
-      // Use a female voice if available - try multiple options
-      const femaleVoice = voices.find(voice => 
-        voice.name.toLowerCase().includes('samantha') ||
-        voice.name.toLowerCase().includes('victoria') ||
-        voice.name.toLowerCase().includes('zira') ||
-        voice.name.toLowerCase().includes('susan') ||
-        voice.name.toLowerCase().includes('karen') ||
-        (voice.name.toLowerCase().includes('female') && voice.lang.startsWith('en')) ||
-        (voice.name.toLowerCase().includes('woman') && voice.lang.startsWith('en'))
-      ) || voices.find(voice => voice.lang.startsWith('en-US')) || voices[0];
+      const preferredVoice = voices.find(voice => 
+        voice.lang.startsWith('en-US')
+      ) || voices.find(voice => voice.lang.startsWith('en')) || voices[0];
       
-      if (femaleVoice) {
-        console.log('Using voice:', femaleVoice.name);
-        utterance.voice = femaleVoice;
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
       }
       
       utterance.rate = 1.0;
-      utterance.pitch = 1.2;
+      utterance.pitch = 1.0;
       utterance.volume = 1.0;
       utterance.lang = 'en-US';
 
-      utterance.onstart = () => {
-        console.log('Speech started');
-      };
-
       utterance.onend = () => {
-        console.log('Speech completed');
+        this.log('✅ Speech completed');
         this.isSpeaking = false;
         this.resumeListening();
         onComplete?.();
       };
 
       utterance.onerror = (event) => {
-        console.error('Speech synthesis error:', event);
+        this.log('❌ Speech error:', event);
         this.isSpeaking = false;
         this.resumeListening();
         onComplete?.();
       };
 
-      console.log('Speaking:', text);
       this.synth!.speak(utterance);
     };
 
-    // If voices are loaded, speak immediately
     if (this.voicesLoaded) {
       speakWhenReady();
     } else {
-      // Wait a bit for voices to load
       setTimeout(speakWhenReady, 100);
     }
   }
@@ -359,13 +396,13 @@ class VoiceDetection {
   private resumeListening() {
     if (this.isListening && this.recognition) {
       setTimeout(() => {
-        if (this.isListening) {
+        if (this.isListening && !this.isSpeaking) {
           try {
             this.recognition.start();
-            console.log('▶️ Resumed listening for', this.isAwaitingConfirmation ? 'confirmation' : 'password');
+            this.log('▶️ Resumed listening for', this.isAwaitingConfirmation ? 'confirmation' : 'password');
           } catch (e: any) {
             if (e.name !== 'InvalidStateError') {
-              console.error('Failed to resume recognition:', e);
+              this.log('Resume error:', e.message);
             }
           }
         }
@@ -373,9 +410,54 @@ class VoiceDetection {
     }
   }
 
+  private startKeepAlive() {
+    // Keep the recognition alive by checking its state periodically
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+    }
+    
+    this.keepAliveInterval = window.setInterval(() => {
+      if (this.isListening && !this.isSpeaking) {
+        // Check if recognition seems to have stopped
+        const timeSinceLastSpeech = Date.now() - this.lastSpeechTime;
+        
+        // Log status every 10 seconds for debugging
+        if (timeSinceLastSpeech > 10000 && timeSinceLastSpeech % 10000 < 1000) {
+          this.log('🔄 Keep-alive check - still listening for:', `"${this.password}"`);
+        }
+        
+        // Force restart if we haven't heard anything in 30 seconds
+        if (timeSinceLastSpeech > 30000) {
+          this.log('⚠️ No speech detected for 30s, forcing restart...');
+          try {
+            this.recognition?.stop();
+          } catch (e) {}
+          
+          setTimeout(() => {
+            if (this.isListening && !this.isSpeaking) {
+              try {
+                this.recognition?.start();
+                this.log('🔄 Recognition force-restarted');
+              } catch (e) {}
+            }
+          }, 100);
+          
+          this.lastSpeechTime = Date.now(); // Reset timer
+        }
+      }
+    }, 1000);
+  }
+
+  private stopKeepAlive() {
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval);
+      this.keepAliveInterval = null;
+    }
+  }
+
   async requestMicrophonePermission(): Promise<boolean> {
     try {
-      console.log('🎤 Requesting microphone permission...');
+      this.log('🎤 Requesting microphone permission...');
       this.microphoneStream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -383,7 +465,7 @@ class VoiceDetection {
           autoGainControl: true
         }
       });
-      console.log('✅ Microphone permission granted');
+      this.log('✅ Microphone permission granted');
       return true;
     } catch (error) {
       console.error('❌ Microphone permission denied:', error);
@@ -391,19 +473,22 @@ class VoiceDetection {
     }
   }
 
-  async start(options: VoiceDetectionOptions) {
+  async start(options: VoiceDetectionOptions): Promise<boolean> {
+    this.log('🚀 Starting voice detection...');
+    
     if (!this.recognition) {
-      console.error('❌ Speech recognition not available');
-      // Try to reinitialize
+      this.log('⚠️ Recognition not available, reinitializing...');
       this.initRecognition();
       if (!this.recognition) {
+        console.error('❌ Speech recognition not supported');
         return false;
       }
     }
 
     if (this.isListening) {
-      console.log('⚠️ Already listening');
-      return true;
+      this.log('⚠️ Already listening, stopping first...');
+      this.stop();
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
     if (!options.password || options.password.trim() === '') {
@@ -411,67 +496,80 @@ class VoiceDetection {
       return false;
     }
 
-    // Request microphone permission first
+    // Request microphone permission
     const hasPermission = await this.requestMicrophonePermission();
     if (!hasPermission) {
-      console.error('❌ Cannot start voice detection without microphone permission');
+      console.error('❌ Cannot start without microphone permission');
       return false;
     }
 
-    this.password = options.password;
+    this.password = options.password.trim();
     this.onPasswordDetected = options.onPasswordDetected;
     this.onConfirmation = options.onConfirmation;
     this.isListening = true;
     this.isAwaitingConfirmation = false;
     this.restartAttempts = 0;
     this.isSpeaking = false;
+    this.lastSpeechTime = Date.now();
 
     try {
       this.recognition.start();
-      console.log('🎧 Voice detection started, listening for:', this.password);
+      this.log('✅ Voice detection started!');
+      this.log('🔑 Listening for password:', `"${this.password}"`);
+      
+      // Start keep-alive mechanism
+      this.startKeepAlive();
+      
       return true;
     } catch (error: any) {
       if (error.name === 'InvalidStateError') {
-        // Already started, that's fine
-        console.log('Recognition already started');
+        this.log('Already started');
+        this.startKeepAlive();
         return true;
       }
-      console.error('❌ Failed to start recognition:', error);
+      console.error('❌ Failed to start:', error);
       this.isListening = false;
       return false;
     }
   }
 
   stop() {
-    console.log('🛑 Stopping voice detection...');
+    this.log('🛑 Stopping voice detection...');
     this.isListening = false;
     this.isAwaitingConfirmation = false;
     this.isSpeaking = false;
     
+    this.stopKeepAlive();
+    
     if (this.recognition) {
       try {
         this.recognition.stop();
-        console.log('✅ Voice detection stopped');
-      } catch (error) {
-        console.error('Error stopping recognition:', error);
-      }
+      } catch (error) {}
     }
 
-    // Release microphone stream
     if (this.microphoneStream) {
       this.microphoneStream.getTracks().forEach(track => track.stop());
       this.microphoneStream = null;
-      console.log('🎤 Microphone released');
     }
 
-    // Cancel any ongoing speech
     if (this.synth) {
       this.synth.cancel();
     }
+    
+    this.log('✅ Voice detection stopped');
   }
 
-  isActive() {
+  isActive(): boolean {
     return this.isListening;
+  }
+  
+  // For debugging - get current status
+  getStatus(): { isListening: boolean; isAwaiting: boolean; password: string } {
+    return {
+      isListening: this.isListening,
+      isAwaiting: this.isAwaitingConfirmation,
+      password: this.password
+    };
   }
 }
 
