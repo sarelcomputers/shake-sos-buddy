@@ -26,7 +26,7 @@ const formatSAPhoneNumber = (phone: string): string => {
   return cleaned;
 };
 
-// Send SMS via device native carrier
+// Send SMS via device native carrier (uses user's SMS bundle)
 const sendNativeSMS = async (
   phoneNumbers: string[],
   message: string
@@ -44,26 +44,34 @@ const sendNativeSMS = async (
   // Format all phone numbers for SA
   const formattedNumbers = phoneNumbers.map(formatSAPhoneNumber);
   
+  console.log('📤 Sending SMS via device carrier to:', formattedNumbers);
+  console.log('📱 This uses your phone\'s SIM and SMS bundle');
+  
   try {
-    console.log('📤 Sending SMS to:', formattedNumbers);
-    
-    // The SmsManager plugin handles permissions internally
-    // On Android, it will request SEND_SMS permission if not granted
+    // The SmsManager plugin sends SMS directly from the device
+    // This uses the user's SMS bundle/carrier plan
+    // On first use, Android will prompt for SEND_SMS permission
     const result = await SmsManager.send({
       numbers: formattedNumbers,
       text: message,
     });
     
-    console.log('✅ SMS send result:', result);
+    console.log('✅ SMS sent successfully via device carrier:', result);
     
     // If we get here without error, consider all successful
     formattedNumbers.forEach(num => successful.push(num));
   } catch (error: any) {
     console.error('❌ Error sending native SMS:', error);
     
-    // Check if it's a permission error
+    // Check for specific error types
     if (error?.message?.toLowerCase().includes('permission')) {
-      console.error('📵 SMS permission denied. User needs to grant SMS permission in device settings.');
+      console.error('📵 SMS PERMISSION DENIED');
+      console.error('📵 User must grant SEND_SMS permission in device settings');
+      console.error('📵 Settings → Apps → Alfa22 SOS → Permissions → SMS → Allow');
+    } else if (error?.message?.toLowerCase().includes('no sim')) {
+      console.error('📵 No SIM card detected - cannot send SMS');
+    } else if (error?.message?.toLowerCase().includes('network')) {
+      console.error('📵 Network error - check cellular connection');
     }
     
     // Mark all as failed if bulk send fails

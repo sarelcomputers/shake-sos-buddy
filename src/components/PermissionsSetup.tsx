@@ -161,24 +161,46 @@ export const PermissionsSetup = ({ onComplete }: { onComplete: () => void }) => 
       id: 'sms',
       icon: MessageSquare,
       title: 'SMS Sending',
-      description: 'Enables the app to send emergency text messages to your saved contacts automatically when you trigger an SOS alert.',
+      description: 'Enables the app to send emergency text messages directly from your device using your SMS bundle. Messages are sent locally through your phone\'s carrier.',
       action: async () => {
         if (!isNative) {
           setPermissions(prev => ({ ...prev, sms: 'granted' }));
+          toast.info('SMS sending only available on mobile app');
           return true;
         }
         
-        try {
-          // On Android, we need to request SMS permissions
-          // The plugin will handle the permission request automatically when trying to send
+        const platform = Capacitor.getPlatform();
+        
+        if (platform === 'ios') {
+          // iOS uses system SMS app, no permission needed
           setPermissions(prev => ({ ...prev, sms: 'granted' }));
-          toast.success('SMS permission will be requested when sending');
+          toast.success('iOS will use system SMS app');
           return true;
-        } catch (error) {
-          console.error('SMS permission error:', error);
-          setPermissions(prev => ({ ...prev, sms: 'denied' }));
-          return false;
         }
+        
+        if (platform === 'android') {
+          try {
+            // On Android, the SEND_SMS permission is declared in AndroidManifest.xml
+            // The SmsManager plugin will request it automatically when sending
+            // We inform the user that permission will be requested on first SOS
+            setPermissions(prev => ({ ...prev, sms: 'granted' }));
+            toast.success('SMS ready - permission will be requested on first emergency alert', {
+              duration: 5000,
+            });
+            toast.info('💡 SMS uses your device\'s carrier and SMS bundle', {
+              duration: 4000,
+            });
+            return true;
+          } catch (error) {
+            console.error('SMS permission error:', error);
+            setPermissions(prev => ({ ...prev, sms: 'denied' }));
+            toast.error('SMS permission error');
+            return false;
+          }
+        }
+        
+        setPermissions(prev => ({ ...prev, sms: 'granted' }));
+        return true;
       },
     },
     {
