@@ -1,6 +1,6 @@
 # Android Foreground Service Setup
 
-This guide explains how to set up a true Android foreground service for background voice and shake detection when the screen is locked.
+This guide explains how to set up a true Android foreground service for background voice and shake detection when the screen is locked, plus native SMS sending using your device's carrier.
 
 ## Overview
 
@@ -8,6 +8,17 @@ Android requires a foreground service with a persistent notification to perform 
 - Continuous shake detection via accelerometer
 - Voice detection via microphone
 - Location tracking
+- **Native SMS sending using device carrier (uses your SMS bundle)**
+
+## Key Features
+
+### Native SMS Sending
+When converted to an APK, the app sends SMS messages **locally from your device** using the Android SMS API. This means:
+- ✅ Uses your phone's SIM card and carrier
+- ✅ Messages count against your SMS bundle/plan
+- ✅ Works without internet connection
+- ✅ More reliable than cloud-based SMS services
+- ✅ Works even when screen is locked (with foreground service)
 
 ## Step 1: Update AndroidManifest.xml
 
@@ -16,7 +27,11 @@ After running `npx cap sync`, open `android/app/src/main/AndroidManifest.xml` an
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
-    <!-- Add these permissions -->
+    <!-- SMS Permissions - CRITICAL for sending SMS from device -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    
+    <!-- Foreground Service Permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
@@ -24,12 +39,17 @@ After running `npx cap sync`, open `android/app/src/main/AndroidManifest.xml` an
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- Audio/Voice Permissions -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    
+    <!-- Location Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    
+    <!-- Battery Optimization -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.SEND_SMS" />
     
     <application ...>
         
