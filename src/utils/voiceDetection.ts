@@ -174,6 +174,8 @@ class VoiceDetection {
     };
 
     this.recognition.onstart = () => {
+      console.log('🟢 RECOGNITION ACTIVE - SPEAK NOW!');
+      console.log('🔑 Listening for password:', `"${this.password}"`);
       this.log('🟢 Recognition ACTIVE - listening for password:', `"${this.password}"`);
       this.restartAttempts = 0;
     };
@@ -560,6 +562,9 @@ class VoiceDetection {
 
     try {
       this.recognition.start();
+      console.log('🟢🟢🟢 VOICE DETECTION ACTIVE 🟢🟢🟢');
+      console.log('🔑 PASSWORD SET TO:', `"${this.password}"`);
+      console.log('🎤 Speak your password to test. You should see "HEARD:" logs below.');
       this.log('✅ Voice detection started!');
       this.log('🔑 Listening for password:', `"${this.password}"`);
       
