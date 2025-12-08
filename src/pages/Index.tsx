@@ -796,6 +796,8 @@ const Index = () => {
           enabled={settings.enabled}
           shakeCount={shakeCount}
           requiredShakes={settings.shakeCount}
+          voiceEnabled={settings.voiceAlertEnabled}
+          voicePassword={settings.voicePassword}
         />
 
         {/* Subscription Status */}

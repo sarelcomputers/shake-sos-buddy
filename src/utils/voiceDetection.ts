@@ -87,17 +87,21 @@ class VoiceDetection {
         const confidence = result[0].confidence;
         const isFinal = result.isFinal;
         
+        // ALWAYS log what we hear for debugging
+        console.log(`🎤 HEARD${isFinal ? ' (FINAL)' : ''}:`, `"${transcript}"`, `(${(confidence * 100).toFixed(0)}%)`);
         this.log(`🎤 Heard${isFinal ? ' (final)' : ''}:`, `"${transcript}"`, `confidence: ${(confidence * 100).toFixed(1)}%`);
 
         if (this.isAwaitingConfirmation) {
           // Listen for yes/no response
-          if (transcript.includes('yes') || transcript.includes('yeah') || transcript.includes('yep') || transcript.includes('help')) {
+          if (transcript.includes('yes') || transcript.includes('yeah') || transcript.includes('yep') || transcript.includes('help') || transcript.includes('okay') || transcript.includes('ok')) {
+            console.log('✅ USER CONFIRMED - TRIGGERING EMERGENCY!');
             this.log('✅ User confirmed - triggering emergency!');
             this.isAwaitingConfirmation = false;
             this.onConfirmation?.(true);
             this.stop();
             return;
-          } else if (transcript.includes('no') || transcript.includes('nope') || transcript.includes('cancel') || transcript.includes('stop')) {
+          } else if (transcript.includes('no') || transcript.includes('nope') || transcript.includes('cancel') || transcript.includes('stop') || transcript.includes('false')) {
+            console.log('❌ User cancelled');
             this.log('❌ User cancelled');
             this.isAwaitingConfirmation = false;
             this.onConfirmation?.(false);
@@ -107,8 +111,11 @@ class VoiceDetection {
           // Listen for password - check all alternatives
           const passwordLower = this.password.toLowerCase().trim();
           
+          console.log(`🔑 Checking against password: "${passwordLower}"`);
+          
           // Check main transcript
           if (this.matchesPassword(transcript, passwordLower)) {
+            console.log('🔑🔑🔑 PASSWORD DETECTED IN MAIN TRANSCRIPT!');
             this.log('🔑 Password detected in main transcript!');
             this.handlePasswordDetected();
             return;
@@ -117,7 +124,8 @@ class VoiceDetection {
           // Check all alternatives
           for (let alt = 0; alt < result.length; alt++) {
             const altTranscript = result[alt].transcript.toLowerCase().trim();
-            if (this.matchesPassword(altTranscript, passwordLower)) {
+            if (altTranscript !== transcript && this.matchesPassword(altTranscript, passwordLower)) {
+              console.log('🔑🔑🔑 PASSWORD DETECTED IN ALTERNATIVE:', altTranscript);
               this.log('🔑 Password detected in alternative:', altTranscript);
               this.handlePasswordDetected();
               return;
@@ -189,43 +197,68 @@ class VoiceDetection {
   }
 
   private matchesPassword(transcript: string, password: string): boolean {
-    // Normalize both strings
-    const t = transcript.toLowerCase().trim();
-    const p = password.toLowerCase().trim();
+    // Normalize both strings - remove punctuation too
+    const t = transcript.toLowerCase().trim().replace(/[.,!?]/g, '');
+    const p = password.toLowerCase().trim().replace(/[.,!?]/g, '');
+    
+    // Skip very short utterances unless password is also short
+    if (t.length < 2 && p.length > 2) return false;
     
     // Exact match
     if (t === p) {
+      console.log('✅ EXACT MATCH!');
       this.log('✅ Exact match!');
       return true;
     }
     
-    // Contains match
+    // Contains match - password is in transcript
     if (t.includes(p)) {
+      console.log('✅ CONTAINS MATCH! Transcript contains password');
       this.log('✅ Contains match!');
       return true;
     }
     
-    // Password contains transcript (for partial matches)
-    if (p.includes(t) && t.length >= 3) {
+    // Transcript is in password (for partial speech)
+    if (p.includes(t) && t.length >= 2) {
+      console.log('✅ PARTIAL MATCH! Transcript is part of password');
       this.log('✅ Partial match!');
       return true;
     }
     
-    // Check each word
-    const words = t.split(/\s+/);
-    for (const word of words) {
-      if (word === p || p.includes(word) || word.includes(p)) {
-        this.log('✅ Word match:', word);
-        return true;
+    // Check individual words
+    const tWords = t.split(/\s+/).filter(w => w.length > 1);
+    const pWords = p.split(/\s+/).filter(w => w.length > 1);
+    
+    // Any word from password appears in transcript
+    for (const pw of pWords) {
+      for (const tw of tWords) {
+        if (tw === pw || tw.includes(pw) || pw.includes(tw)) {
+          console.log('✅ WORD MATCH!', tw, '~', pw);
+          this.log('✅ Word match:', tw, '~', pw);
+          return true;
+        }
       }
     }
     
-    // Very lenient fuzzy match - allow up to 40% error
+    // Fuzzy match - very lenient, up to 50% error rate
     const distance = this.levenshteinDistance(t, p);
-    const threshold = Math.max(2, Math.floor(p.length * 0.4));
+    const threshold = Math.max(3, Math.floor(p.length * 0.5));
     if (distance <= threshold) {
+      console.log('✅ FUZZY MATCH! Distance:', distance, 'Threshold:', threshold);
       this.log('✅ Fuzzy match! Distance:', distance, 'Threshold:', threshold);
       return true;
+    }
+    
+    // Check if any word is a close fuzzy match to any password word
+    for (const pw of pWords) {
+      for (const tw of tWords) {
+        const wordDistance = this.levenshteinDistance(tw, pw);
+        if (wordDistance <= Math.max(2, Math.floor(pw.length * 0.4))) {
+          console.log('✅ FUZZY WORD MATCH!', tw, '~', pw, 'distance:', wordDistance);
+          this.log('✅ Fuzzy word match:', tw, '~', pw);
+          return true;
+        }
+      }
     }
     
     return false;
