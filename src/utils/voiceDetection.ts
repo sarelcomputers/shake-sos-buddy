@@ -189,29 +189,42 @@ class VoiceDetection {
   }
 
   private matchesPassword(transcript: string, password: string): boolean {
+    // Normalize both strings
+    const t = transcript.toLowerCase().trim();
+    const p = password.toLowerCase().trim();
+    
     // Exact match
-    if (transcript === password) return true;
+    if (t === p) {
+      this.log('✅ Exact match!');
+      return true;
+    }
     
     // Contains match
-    if (transcript.includes(password)) return true;
+    if (t.includes(p)) {
+      this.log('✅ Contains match!');
+      return true;
+    }
     
-    // Word boundary match (password as a word within transcript)
-    const words = transcript.split(/\s+/);
-    const passwordWords = password.split(/\s+/);
+    // Password contains transcript (for partial matches)
+    if (p.includes(t) && t.length >= 3) {
+      this.log('✅ Partial match!');
+      return true;
+    }
     
-    // Check if all password words appear in order
-    let passwordIndex = 0;
+    // Check each word
+    const words = t.split(/\s+/);
     for (const word of words) {
-      if (word === passwordWords[passwordIndex] || word.includes(passwordWords[passwordIndex])) {
-        passwordIndex++;
-        if (passwordIndex >= passwordWords.length) {
-          return true;
-        }
+      if (word === p || p.includes(word) || word.includes(p)) {
+        this.log('✅ Word match:', word);
+        return true;
       }
     }
     
-    // Fuzzy match - check if transcript is very similar
-    if (this.levenshteinDistance(transcript, password) <= Math.max(2, password.length * 0.3)) {
+    // Very lenient fuzzy match - allow up to 40% error
+    const distance = this.levenshteinDistance(t, p);
+    const threshold = Math.max(2, Math.floor(p.length * 0.4));
+    if (distance <= threshold) {
+      this.log('✅ Fuzzy match! Distance:', distance, 'Threshold:', threshold);
       return true;
     }
     

@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
-import { ConsentGate } from "@/components/ConsentGate";
 import Index from "./pages/Index";
 import History from "./pages/History";
 import Subscription from "./pages/Subscription";
@@ -33,7 +32,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" replace />;
   }
 
-  return <ConsentGate>{children}</ConsentGate>;
+  return <>{children}</>;
 };
 
 const App = () => (

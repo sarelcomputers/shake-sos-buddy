@@ -36,8 +36,8 @@ const sendNativeSMS = async (
   
   // Check if we're on a native platform
   if (!Capacitor.isNativePlatform()) {
-    console.log('📱 Not on native platform, skipping native SMS');
-    phoneNumbers.forEach(num => failed.push(formatSAPhoneNumber(num)));
+    console.log('📱 Not on native platform - SMS requires Android APK');
+    console.log('📱 In browser/web preview, SMS cannot be sent');
     return { successful, failed };
   }
   
@@ -45,36 +45,18 @@ const sendNativeSMS = async (
   const formattedNumbers = phoneNumbers.map(formatSAPhoneNumber);
   
   console.log('📤 Sending SMS via device carrier to:', formattedNumbers);
-  console.log('📱 This uses your phone\'s SIM and SMS bundle');
   
   try {
-    // The SmsManager plugin sends SMS directly from the device
-    // This uses the user's SMS bundle/carrier plan
-    // On first use, Android will prompt for SEND_SMS permission
     const result = await SmsManager.send({
       numbers: formattedNumbers,
       text: message,
     });
     
-    console.log('✅ SMS sent successfully via device carrier:', result);
-    
-    // If we get here without error, consider all successful
+    console.log('✅ SMS sent successfully:', result);
     formattedNumbers.forEach(num => successful.push(num));
   } catch (error: any) {
-    console.error('❌ Error sending native SMS:', error);
-    
-    // Check for specific error types
-    if (error?.message?.toLowerCase().includes('permission')) {
-      console.error('📵 SMS PERMISSION DENIED');
-      console.error('📵 User must grant SEND_SMS permission in device settings');
-      console.error('📵 Settings → Apps → Alfa22 SOS → Permissions → SMS → Allow');
-    } else if (error?.message?.toLowerCase().includes('no sim')) {
-      console.error('📵 No SIM card detected - cannot send SMS');
-    } else if (error?.message?.toLowerCase().includes('network')) {
-      console.error('📵 Network error - check cellular connection');
-    }
-    
-    // Mark all as failed if bulk send fails
+    console.error('❌ SMS error:', error);
+    // Don't fail silently on web - it's expected
     formattedNumbers.forEach(num => failed.push(num));
   }
   
