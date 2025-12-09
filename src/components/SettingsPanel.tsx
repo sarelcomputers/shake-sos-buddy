@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MessageSquare, Gauge, Hash, Volume2, AlertCircle, Shield, Mail, Save } from 'lucide-react';
+import { MessageSquare, Gauge, Hash, Shield, Mail, Save } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +16,6 @@ interface SettingsPanelProps {
   testEmailMessage: string;
   sensitivity: number;
   shakeCount: number;
-  voiceAlertEnabled: boolean;
-  voicePassword: string;
   smsTriggerEnabled: boolean;
   cooldownPeriod: number;
   onSaveSettings: (settings: {
@@ -27,8 +25,6 @@ interface SettingsPanelProps {
     testEmailMessage: string;
     sensitivity: number;
     shakeCount: number;
-    voiceAlertEnabled: boolean;
-    voicePassword: string;
     smsTriggerEnabled: boolean;
     cooldownPeriod: number;
   }) => void;
@@ -41,8 +37,6 @@ export const SettingsPanel = ({
   testEmailMessage,
   sensitivity,
   shakeCount,
-  voiceAlertEnabled,
-  voicePassword,
   smsTriggerEnabled,
   cooldownPeriod,
   onSaveSettings,
@@ -54,8 +48,6 @@ export const SettingsPanel = ({
   const [localTestEmailMessage, setLocalTestEmailMessage] = useState(testEmailMessage);
   const [localSensitivity, setLocalSensitivity] = useState(sensitivity);
   const [localShakeCount, setLocalShakeCount] = useState<number>(shakeCount);
-  const [localVoiceAlertEnabled, setLocalVoiceAlertEnabled] = useState(voiceAlertEnabled);
-  const [localVoicePassword, setLocalVoicePassword] = useState(voicePassword);
   const [localSmsTriggerEnabled, setLocalSmsTriggerEnabled] = useState(smsTriggerEnabled);
   const [localCooldownPeriod, setLocalCooldownPeriod] = useState(cooldownPeriod);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -69,11 +61,9 @@ export const SettingsPanel = ({
     setLocalTestEmailMessage(testEmailMessage);
     setLocalSensitivity(sensitivity);
     setLocalShakeCount(Number(shakeCount));
-    setLocalVoiceAlertEnabled(voiceAlertEnabled);
-    setLocalVoicePassword(voicePassword);
     setLocalSmsTriggerEnabled(smsTriggerEnabled);
     setLocalCooldownPeriod(cooldownPeriod);
-  }, [message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, voiceAlertEnabled, voicePassword, smsTriggerEnabled, cooldownPeriod]);
+  }, [message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, smsTriggerEnabled, cooldownPeriod]);
 
   // Check for unsaved changes
   useEffect(() => {
@@ -84,13 +74,11 @@ export const SettingsPanel = ({
       localTestEmailMessage !== testEmailMessage ||
       localSensitivity !== sensitivity ||
       localShakeCount !== shakeCount ||
-      localVoiceAlertEnabled !== voiceAlertEnabled ||
-      localVoicePassword !== voicePassword ||
       localSmsTriggerEnabled !== smsTriggerEnabled ||
       localCooldownPeriod !== cooldownPeriod;
     
     setHasUnsavedChanges(changed);
-  }, [localMessage, localTestMessage, localEmailMessage, localTestEmailMessage, localSensitivity, localShakeCount, localVoiceAlertEnabled, localVoicePassword, localSmsTriggerEnabled, localCooldownPeriod, message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, voiceAlertEnabled, voicePassword, smsTriggerEnabled, cooldownPeriod]);
+  }, [localMessage, localTestMessage, localEmailMessage, localTestEmailMessage, localSensitivity, localShakeCount, localSmsTriggerEnabled, localCooldownPeriod, message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, smsTriggerEnabled, cooldownPeriod]);
 
   const handleSave = () => {
     onSaveSettings({
@@ -100,8 +88,6 @@ export const SettingsPanel = ({
       testEmailMessage: localTestEmailMessage,
       sensitivity: localSensitivity,
       shakeCount: localShakeCount,
-      voiceAlertEnabled: localVoiceAlertEnabled,
-      voicePassword: localVoicePassword,
       smsTriggerEnabled: localSmsTriggerEnabled,
       cooldownPeriod: localCooldownPeriod,
     });
@@ -134,56 +120,6 @@ export const SettingsPanel = ({
             <p className="text-xs text-muted-foreground">
               Enable or disable SMS alerts when SOS is triggered
             </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b">
-              <div className="flex items-center gap-2">
-                <Volume2 className="w-5 h-5 text-primary" />
-                <Label htmlFor="voiceAlert" className="text-base font-semibold">
-                  Voice Alert
-                </Label>
-              </div>
-              <Switch
-                id="voiceAlert"
-                checked={localVoiceAlertEnabled}
-                onCheckedChange={setLocalVoiceAlertEnabled}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Enable voice activation for SOS alerts
-              </p>
-              {localVoiceAlertEnabled && (
-                <div className="flex items-start gap-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md">
-                  <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    Your device will stay awake (screen may dim) to continuously listen for your password. This uses more battery but works even when screen is locked.
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {localVoiceAlertEnabled && (
-              <div className="space-y-3 pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="voicePassword" className="text-sm font-medium">
-                    Voice Alert Password
-                  </Label>
-                </div>
-                <Input
-                  id="voicePassword"
-                  type="text"
-                  value={localVoicePassword}
-                  onChange={(e) => setLocalVoicePassword(e.target.value)}
-                  placeholder="e.g., help me now"
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Say this password when armed to activate voice confirmation. Device will ask "Do you need help?" - say "yes" to trigger alert or "no" to cancel.
-                </p>
-              </div>
-            )}
           </div>
 
           <div className="space-y-3">

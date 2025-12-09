@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Power, Settings as SettingsIcon, Users, UserCircle, History, Shield, AlertCircle, FileText } from 'lucide-react';
+import { Power, Settings as SettingsIcon, Users, UserCircle, History, Shield, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,7 +29,6 @@ import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { checkBackgroundSOSTrigger } from '@/utils/backgroundRunner';
-import { voiceDetection } from '@/utils/voiceDetection';
 import { startForegroundService, stopForegroundService, isForegroundServiceAvailable } from '@/utils/foregroundService';
 
 
@@ -48,8 +47,6 @@ const Index = () => {
     updateTestEmailMessage,
     updateSensitivity,
     updateShakeCount,
-    updateVoiceAlertEnabled,
-    updateVoicePassword,
     updateSmsTriggerEnabled,
     updateCooldownPeriod,
     addContact,
@@ -111,12 +108,7 @@ const Index = () => {
     }
   }, [settings.enabled]);
 
-  // Handle voice detection cleanup and wake lock
-  useEffect(() => {
-    return () => {
-      voiceDetection.stop();
-    };
-  }, []);
+  // Keep device awake when system is armed to ensure shake detection works
 
   // Keep device awake when system is armed to ensure shake and voice detection work
   useEffect(() => {
@@ -252,17 +244,6 @@ const Index = () => {
           }
         }
         
-        // Request microphone for voice detection if enabled
-        if (settings.voiceAlertEnabled && settings.voicePassword) {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            console.log('✅ Microphone permission granted');
-          } catch (micError) {
-            console.warn('⚠️ Microphone permission failed - voice detection disabled:', micError);
-          }
-        }
-        
         // Request notification permission for PWA
         if ('Notification' in window && Notification.permission === 'default') {
           await Notification.requestPermission();
@@ -326,75 +307,6 @@ const Index = () => {
       console.error('Error storing background settings:', error);
     }
     
-    // Handle voice detection
-    if (willBeEnabled && settings.voiceAlertEnabled && settings.voicePassword) {
-      console.log('🎤 Starting voice detection with password:', settings.voicePassword);
-      
-      // Small delay to ensure previous instance is fully stopped
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const voiceStarted = await voiceDetection.start({
-        password: settings.voicePassword,
-        onPasswordDetected: () => {
-          console.log('🔑 Voice password detected! Asking for confirmation...');
-          toast({
-            title: "🎤 Voice Password Detected!",
-            description: "Say 'YES' to trigger alert or 'NO' to cancel",
-            duration: 10000,
-          });
-        },
-        onConfirmation: async (confirmed) => {
-          console.log('Voice confirmation received:', confirmed);
-          if (confirmed) {
-            console.log('✅ User confirmed "yes" - triggering SOS alert...');
-            
-            // Set cooldown for shake detection (2 minutes)
-            const cooldownUntil = Date.now() + (2 * 60 * 1000);
-            try {
-              await Preferences.set({
-                key: 'voice_alert_cooldown',
-                value: cooldownUntil.toString()
-              });
-              console.log('🔇 Shake detection disabled for 2 minutes');
-            } catch (error) {
-              console.error('Error setting cooldown:', error);
-            }
-            
-            toast({
-              title: "✅ Voice Confirmed",
-              description: "Triggering emergency alert... (Shake detection paused for 2 minutes)",
-            });
-            await handleSOS();
-          } else {
-            console.log('❌ User said "no" - cancelling alert');
-            toast({
-              title: "Alert Cancelled",
-              description: "Voice alert was cancelled",
-            });
-          }
-        },
-      });
-      
-      if (voiceStarted) {
-        console.log('✅ Voice detection successfully started');
-        toast({
-          title: "🎧 Voice Listening Active",
-          description: `Say "${settings.voicePassword}" to trigger SOS`,
-          duration: 5000,
-        });
-      } else {
-        console.error('❌ Voice detection failed to start');
-        toast({
-          title: "Voice Detection Failed",
-          description: "Could not start voice detection. Please check microphone permissions.",
-          variant: "destructive",
-        });
-      }
-    } else if (!willBeEnabled) {
-      console.log('🛑 Stopping voice detection');
-      voiceDetection.stop();
-    }
-    
     // Start/stop Android foreground service for true background detection
     if (Capacitor.getPlatform() === 'android') {
       if (willBeEnabled) {
@@ -416,10 +328,6 @@ const Index = () => {
       const isNative = Capacitor.isNativePlatform();
       const platform = Capacitor.getPlatform();
       
-      const voiceMsg = settings.voiceAlertEnabled && settings.voicePassword 
-        ? ` Voice activation enabled - say "${settings.voicePassword}" to trigger.`
-        : '';
-      
       const foregroundMsg = platform === 'android' && isForegroundServiceAvailable()
         ? ' Background service running with persistent notification.'
         : '';
@@ -427,8 +335,8 @@ const Index = () => {
       toast({
         title: "System Armed ✓",
         description: isNative 
-          ? `Background monitoring enabled.${foregroundMsg}${platform === 'ios' ? ' Keep app in foreground on iOS.' : ''}${voiceMsg}`
-          : `Device will stay awake and monitor for shakes.${voiceMsg}`,
+          ? `Background monitoring enabled.${foregroundMsg}${platform === 'ios' ? ' Keep app in foreground on iOS.' : ''}`
+          : `Device will stay awake and monitor for shakes.`,
         duration: 6000,
       });
     } else {
@@ -796,8 +704,6 @@ const Index = () => {
           enabled={settings.enabled}
           shakeCount={shakeCount}
           requiredShakes={settings.shakeCount}
-          voiceEnabled={settings.voiceAlertEnabled}
-          voicePassword={settings.voicePassword}
         />
 
         {/* Subscription Status */}
@@ -808,7 +714,7 @@ const Index = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="contacts" className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'}`}>
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="contacts" className="flex items-center gap-1 text-xs sm:text-sm">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Contacts</span>
@@ -832,15 +738,6 @@ const Index = () => {
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">History</span>
             </button>
-            {!adminLoading && isAdmin && (
-              <button 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs sm:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted flex gap-1"
-                onClick={() => navigate('/control-room')}
-              >
-                <AlertCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">Control</span>
-              </button>
-            )}
           </TabsList>
 
           <TabsContent value="contacts" className="space-y-4 mt-6">
@@ -866,8 +763,6 @@ const Index = () => {
              testEmailMessage={settings.testEmailMessage}
              sensitivity={settings.sensitivity}
              shakeCount={settings.shakeCount}
-             voiceAlertEnabled={settings.voiceAlertEnabled}
-             voicePassword={settings.voicePassword}
              smsTriggerEnabled={settings.smsTriggerEnabled}
              cooldownPeriod={settings.cooldownPeriod}
              onSaveSettings={async (newSettings) => {
@@ -882,8 +777,6 @@ const Index = () => {
                    testEmailMessage: newSettings.testEmailMessage,
                    sensitivity: Number(newSettings.sensitivity),
                    shakeCount: Number(newSettings.shakeCount),
-                   voiceAlertEnabled: newSettings.voiceAlertEnabled,
-                   voicePassword: newSettings.voicePassword,
                    smsTriggerEnabled: newSettings.smsTriggerEnabled,
                    cooldownPeriod: Number(newSettings.cooldownPeriod),
                  });
