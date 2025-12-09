@@ -9,12 +9,12 @@ interface LocationTrackingOptions {
 
 /**
  * Start tracking user location for a specified duration
- * Default is 5 minutes
+ * Default is 60 minutes (1 hour)
  */
 export async function startLocationTracking({
   sosHistoryId,
   userId,
-  durationMinutes = 5
+  durationMinutes = 60
 }: LocationTrackingOptions): Promise<void> {
   const endTime = Date.now() + (durationMinutes * 60 * 1000);
   let watchId: string | null = null;
