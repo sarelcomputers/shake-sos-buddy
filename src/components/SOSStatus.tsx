@@ -1,15 +1,13 @@
 import { motion } from 'framer-motion';
-import { ShieldAlert, ShieldCheck, Mic, MicOff } from 'lucide-react';
+import { ShieldAlert, ShieldCheck } from 'lucide-react';
 
 interface SOSStatusProps {
   enabled: boolean;
   shakeCount: number;
   requiredShakes: number;
-  voiceEnabled?: boolean;
-  voicePassword?: string;
 }
 
-export const SOSStatus = ({ enabled, shakeCount, requiredShakes, voiceEnabled, voicePassword }: SOSStatusProps) => {
+export const SOSStatus = ({ enabled, shakeCount, requiredShakes }: SOSStatusProps) => {
   return (
     <div className="relative">
       <motion.div
@@ -40,24 +38,6 @@ export const SOSStatus = ({ enabled, shakeCount, requiredShakes, voiceEnabled, v
                 Shake your phone {requiredShakes} times to trigger emergency alert
               </p>
               
-              {/* Voice trigger status */}
-              {voiceEnabled && voicePassword && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center justify-center gap-2 bg-background/20 backdrop-blur-sm rounded-xl px-4 py-2 border border-primary-foreground/30"
-                >
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  >
-                    <Mic className="w-5 h-5 text-primary-foreground" />
-                  </motion.div>
-                  <span className="text-primary-foreground text-sm font-medium">
-                    Voice active - say "{voicePassword}"
-                  </span>
-                </motion.div>
-              )}
               {shakeCount > 0 ? (
                 <motion.div
                   initial={{ scale: 0, opacity: 0 }}
