@@ -148,15 +148,15 @@ export const sendSOSMessages = async (
       throw sosHistoryError;
     }
 
-    // Start live location tracking (5 minutes)
-    console.log('Starting live location tracking (5 minutes)...');
+    // Start live location tracking (1 hour)
+    console.log('Starting live location tracking (1 hour)...');
     startLocationTracking({
       sosHistoryId: sosHistoryData.id,
       userId: userId!,
-      durationMinutes: 5
+      durationMinutes: 60
     });
 
-    // Generate tracking URL (valid for 5 minutes)
+    // Generate tracking URL (valid for 1 hour)
     const trackingUrl = generateTrackingUrl(sosHistoryData.id);
     
     // Format personal info for message if available

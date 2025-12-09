@@ -24,10 +24,14 @@ interface SOSData {
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBpsCYESmSNFPKNnzh4WWyuArYeN_BSb88';
 
-declare global {
-  interface Window {
-    google: typeof google;
-  }
+// Helper function to format time ago
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  
+  if (seconds < 60) return `${seconds} seconds ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+  return `${Math.floor(seconds / 86400)} days ago`;
 }
 
 export default function LiveTracking() {
@@ -100,28 +104,72 @@ export default function LiveTracking() {
     markersRef.current = [];
     if (polylineRef.current) polylineRef.current.setMap(null);
 
-    // Add markers for all locations
+    // Add markers for all locations with trail effect
     locations.forEach((loc, index) => {
+      const isCurrentLocation = index === locations.length - 1;
+      const isFirstLocation = index === 0;
+      
+      // Create custom marker icons
+      let markerIcon: google.maps.Symbol | google.maps.Icon;
+      
+      if (isCurrentLocation) {
+        // Current location - large red pulsing marker
+        markerIcon = {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: '#FF0000',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 3,
+        };
+      } else if (isFirstLocation) {
+        // Start location - green marker
+        markerIcon = {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#00FF00',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 2,
+        };
+      } else {
+        // Trail markers - small blue dots
+        markerIcon = {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 6,
+          fillColor: '#0066FF',
+          fillOpacity: 0.8,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 1,
+        };
+      }
+
       const marker = new google.maps.Marker({
         position: { lat: loc.latitude, lng: loc.longitude },
         map: mapInstanceRef.current!,
-        title: index === locations.length - 1 ? 'Current Location' : `Point ${index + 1}`,
-        icon: index === locations.length - 1 
-          ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-          : 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+        title: isCurrentLocation ? 'Current Location' : isFirstLocation ? 'Start Location' : `Point ${index + 1}`,
+        icon: markerIcon,
+        zIndex: isCurrentLocation ? 1000 : isFirstLocation ? 999 : index,
       });
 
+      const timeAgo = getTimeAgo(new Date(loc.timestamp));
       const infoWindow = new google.maps.InfoWindow({
         content: `
-          <div style="padding: 8px;">
-            <p style="font-weight: 600; margin-bottom: 4px;">
-              ${index === locations.length - 1 ? 'Current Location' : `Point ${index + 1}`}
+          <div style="padding: 10px; min-width: 150px;">
+            <p style="font-weight: 700; margin-bottom: 6px; font-size: 14px; color: ${isCurrentLocation ? '#FF0000' : isFirstLocation ? '#00AA00' : '#0066FF'};">
+              ${isCurrentLocation ? '📍 Current Location' : isFirstLocation ? '🟢 Start Location' : `📌 Point ${index + 1}`}
             </p>
-            <p style="font-size: 12px; color: #666;">
-              ${new Date(loc.timestamp).toLocaleTimeString()}
+            <p style="font-size: 12px; color: #333; margin-bottom: 4px;">
+              <strong>Time:</strong> ${new Date(loc.timestamp).toLocaleTimeString()}
             </p>
-            ${loc.speed ? `<p style="font-size: 12px;">Speed: ${(loc.speed * 3.6).toFixed(1)} km/h</p>` : ''}
-            ${loc.accuracy ? `<p style="font-size: 12px;">Accuracy: ±${loc.accuracy.toFixed(0)}m</p>` : ''}
+            <p style="font-size: 11px; color: #666; margin-bottom: 4px;">
+              ${timeAgo}
+            </p>
+            ${loc.speed ? `<p style="font-size: 12px; color: #333;"><strong>Speed:</strong> ${(loc.speed * 3.6).toFixed(1)} km/h</p>` : ''}
+            ${loc.accuracy ? `<p style="font-size: 12px; color: #333;"><strong>Accuracy:</strong> ±${loc.accuracy.toFixed(0)}m</p>` : ''}
+            <p style="font-size: 11px; color: #999; margin-top: 6px;">
+              ${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}
+            </p>
           </div>
         `,
       });
@@ -133,16 +181,25 @@ export default function LiveTracking() {
       markersRef.current.push(marker);
     });
 
-    // Draw polyline path
+    // Draw polyline path with gradient effect
     if (locations.length > 1) {
       const path = locations.map(loc => ({ lat: loc.latitude, lng: loc.longitude }));
       polylineRef.current = new google.maps.Polyline({
         path,
         geodesic: true,
-        strokeColor: '#0000FF',
-        strokeOpacity: 0.7,
-        strokeWeight: 3,
+        strokeColor: '#0066FF',
+        strokeOpacity: 0.8,
+        strokeWeight: 4,
         map: mapInstanceRef.current!,
+        icons: [{
+          icon: {
+            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+            scale: 3,
+            strokeColor: '#0066FF',
+          },
+          offset: '100%',
+          repeat: '100px'
+        }]
       });
     }
 
@@ -189,16 +246,16 @@ export default function LiveTracking() {
         console.log('LiveTracking: SOS data found:', sos);
         setSOSData(sos);
         
-        // Set up activity check based on fetched data
+        // Set up activity check based on fetched data (1 hour tracking window)
         const sosTime = new Date(sos.triggered_at).getTime();
         const now = Date.now();
-        const fiveMinutes = 5 * 60 * 1000;
-        setIsActive(now - sosTime < fiveMinutes);
+        const oneHour = 60 * 60 * 1000;
+        setIsActive(now - sosTime < oneHour);
 
         // Update active status every 10 seconds
         interval = setInterval(() => {
           const currentTime = Date.now();
-          setIsActive(currentTime - sosTime < fiveMinutes);
+          setIsActive(currentTime - sosTime < oneHour);
         }, 10000);
 
         const { data: locs, error: locsError } = await publicSupabase
@@ -367,7 +424,7 @@ export default function LiveTracking() {
               <p className="text-xs font-medium mb-1">Tracking Points: {locations.length}</p>
               <p className="text-xs text-muted-foreground">
                 {isActive 
-                  ? 'Tracking will continue for 5 minutes from alert trigger'
+                  ? 'Tracking will continue for 1 hour from alert trigger'
                   : 'Tracking has ended'}
               </p>
             </div>
