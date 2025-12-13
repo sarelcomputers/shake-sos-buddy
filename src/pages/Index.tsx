@@ -8,11 +8,13 @@ import { SOSStatus } from '@/components/SOSStatus';
 import { SubscriptionStatus } from '@/components/SubscriptionStatus';
 import { ContactList } from '@/components/ContactList';
 import { EmailContactList, type EmailContact } from '@/components/EmailContactList';
+import { WhatsAppContactList, type WhatsAppContact } from '@/components/WhatsAppContactList';
 import { SettingsPanel } from '@/components/SettingsPanel';
 import { ProfileSettings } from '@/components/ProfileSettings';
 import { PersonalInformation } from '@/components/PersonalInformation';
 import { AddContactDialog } from '@/components/AddContactDialog';
 import { AddEmailContactDialog } from '@/components/AddEmailContactDialog';
+import { AddWhatsAppContactDialog } from '@/components/AddWhatsAppContactDialog';
 import { PermissionsSetup } from '@/components/PermissionsSetup';
 import { SubscriptionGate } from '@/components/SubscriptionGate';
 import { useSOSSettings, type Contact } from '@/hooks/useSOSSettings';
@@ -53,11 +55,14 @@ const Index = () => {
     removeContact,
     addEmailContact,
     removeEmailContact,
+    addWhatsAppContact,
+    removeWhatsAppContact,
     saveAllSettings,
   } = useSOSSettings();
 
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddEmailContact, setShowAddEmailContact] = useState(false);
+  const [showAddWhatsAppContact, setShowAddWhatsAppContact] = useState(false);
   const [permissionsComplete, setPermissionsComplete] = useState(false);
 
   useEffect(() => {
@@ -349,10 +354,10 @@ const Index = () => {
 
   const handleSOS = async () => {
     try {
-      if (settings.contacts.length === 0 && settings.emailContacts.length === 0) {
+      if (settings.contacts.length === 0 && settings.emailContacts.length === 0 && settings.whatsappContacts.length === 0) {
         toast({
           title: "No contacts added",
-          description: "Please add emergency contacts or emails before activating SOS",
+          description: "Please add emergency contacts, emails, or WhatsApp contacts before activating SOS",
           variant: "destructive",
         });
         return;
@@ -395,6 +400,11 @@ const Index = () => {
       // Send enhanced email alerts if email contacts exist  
       if (settings.emailContacts.length > 0 && user?.id) {
         await sendEnhancedEmergencyEmails(settings.emailMessage, settings.emailContacts, user.id);
+      }
+
+      // Send WhatsApp alerts if enabled and contacts exist
+      if (settings.whatsappTriggerEnabled && settings.whatsappContacts.length > 0 && user?.id) {
+        await sendWhatsAppEmergencyAlerts(settings.whatsappMessage, settings.whatsappContacts, user.id);
       }
 
       toast({
@@ -443,6 +453,22 @@ const Index = () => {
     }
   };
 
+  const handleTestWhatsApp = async (contact: WhatsAppContact) => {
+    try {
+      await sendTestWhatsApp(settings.testWhatsAppMessage, contact);
+      toast({
+        title: "Test WhatsApp Sent!",
+        description: `Test WhatsApp sent to ${contact.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Test Failed",
+        description: "Could not send test WhatsApp. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const sendTestEmail = async (message: string, contact: EmailContact) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -455,6 +481,74 @@ const Index = () => {
         message: message,
       },
     });
+  };
+
+  const sendTestWhatsApp = async (message: string, contact: WhatsAppContact) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.functions.invoke('send-whatsapp-twilio', {
+      body: {
+        phoneNumbers: [contact.phone],
+        message: `[TEST] ${message}`,
+      },
+    });
+  };
+
+  const sendWhatsAppEmergencyAlerts = async (message: string, contacts: WhatsAppContact[], userId: string) => {
+    try {
+      // Get current location
+      const position = await Geolocation.getCurrentPosition();
+      const { latitude, longitude } = position.coords;
+      const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+      // Fetch personal information
+      const { data: personalInfo } = await supabase
+        .from('personal_info')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      const phoneNumbers = contacts.map(c => c.phone);
+      
+      // Build the message with location and personal info
+      let fullMessage = `🚨 EMERGENCY ALERT!\n\n${message}\n\n📍 Location: ${locationUrl}`;
+      
+      if (personalInfo) {
+        if (personalInfo.name || personalInfo.surname) {
+          fullMessage += `\n\n👤 Person: ${personalInfo.name || ''} ${personalInfo.surname || ''}`.trim();
+        }
+        if (personalInfo.id_number) {
+          fullMessage += `\n🪪 ID: ${personalInfo.id_number}`;
+        }
+        if (personalInfo.blood_type) {
+          fullMessage += `\n🩸 Blood Type: ${personalInfo.blood_type}`;
+        }
+        if (personalInfo.medical_aid_name) {
+          fullMessage += `\n🏥 Medical Aid: ${personalInfo.medical_aid_name}`;
+        }
+        if (personalInfo.home_address) {
+          fullMessage += `\n🏠 Address: ${personalInfo.home_address}`;
+        }
+        if (personalInfo.vehicle_registration) {
+          fullMessage += `\n🚗 Vehicle: ${personalInfo.vehicle_color || ''} ${personalInfo.vehicle_brand || ''} - ${personalInfo.vehicle_registration}`.trim();
+        }
+      }
+
+      console.log('📱 Sending WhatsApp alerts to', phoneNumbers.length, 'contacts');
+      
+      await supabase.functions.invoke('send-whatsapp-twilio', {
+        body: {
+          phoneNumbers,
+          message: fullMessage,
+        },
+      });
+      
+      console.log('✅ WhatsApp alerts sent successfully');
+    } catch (error) {
+      console.error('Error sending WhatsApp alerts:', error);
+      throw error;
+    }
   };
 
   const sendEmergencyEmails = async (message: string, contacts: EmailContact[], userId: string) => {
@@ -753,6 +847,12 @@ const Index = () => {
               onAdd={() => setShowAddEmailContact(true)}
               onTest={handleTestEmail}
             />
+            <WhatsAppContactList
+              contacts={settings.whatsappContacts}
+              onRemove={removeWhatsAppContact}
+              onAdd={() => setShowAddWhatsAppContact(true)}
+              onTest={handleTestWhatsApp}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4 mt-6">
@@ -761,9 +861,12 @@ const Index = () => {
              testMessage={settings.testMessage}
              emailMessage={settings.emailMessage}
              testEmailMessage={settings.testEmailMessage}
+             whatsappMessage={settings.whatsappMessage}
+             testWhatsAppMessage={settings.testWhatsAppMessage}
              sensitivity={settings.sensitivity}
              shakeCount={settings.shakeCount}
              smsTriggerEnabled={settings.smsTriggerEnabled}
+             whatsappTriggerEnabled={settings.whatsappTriggerEnabled}
              cooldownPeriod={settings.cooldownPeriod}
              onSaveSettings={async (newSettings) => {
                try {
@@ -775,9 +878,12 @@ const Index = () => {
                    testMessage: newSettings.testMessage,
                    emailMessage: newSettings.emailMessage,
                    testEmailMessage: newSettings.testEmailMessage,
+                   whatsappMessage: newSettings.whatsappMessage,
+                   testWhatsAppMessage: newSettings.testWhatsAppMessage,
                    sensitivity: Number(newSettings.sensitivity),
                    shakeCount: Number(newSettings.shakeCount),
                    smsTriggerEnabled: newSettings.smsTriggerEnabled,
+                   whatsappTriggerEnabled: newSettings.whatsappTriggerEnabled,
                    cooldownPeriod: Number(newSettings.cooldownPeriod),
                  });
 
@@ -832,6 +938,12 @@ const Index = () => {
         open={showAddEmailContact}
         onOpenChange={setShowAddEmailContact}
         onAdd={addEmailContact}
+      />
+
+      <AddWhatsAppContactDialog
+        open={showAddWhatsAppContact}
+        onOpenChange={setShowAddWhatsAppContact}
+        onAdd={addWhatsAppContact}
       />
     </div>
   );
