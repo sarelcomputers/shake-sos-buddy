@@ -44,6 +44,7 @@ export interface SOSSettings {
   voiceAlertEnabled: boolean;
   voicePassword: string;
   smsTriggerEnabled: boolean;
+  whatsappTriggerEnabled: boolean;
   cooldownPeriod: number;
   contacts: Contact[];
   emailContacts: EmailContact[];
@@ -66,6 +67,7 @@ const DEFAULT_SETTINGS: SOSSettings = {
   voiceAlertEnabled: true,
   voicePassword: '',
   smsTriggerEnabled: true,
+  whatsappTriggerEnabled: false,
   cooldownPeriod: 120,
   contacts: [],
   emailContacts: [],
@@ -120,6 +122,7 @@ export const useSOSSettings = () => {
           voiceAlertEnabled: data.voice_alert_enabled ?? DEFAULT_SETTINGS.voiceAlertEnabled,
           voicePassword: data.voice_password || DEFAULT_SETTINGS.voicePassword,
           smsTriggerEnabled: data.sms_trigger_enabled ?? DEFAULT_SETTINGS.smsTriggerEnabled,
+          whatsappTriggerEnabled: data.whatsapp_trigger_enabled ?? DEFAULT_SETTINGS.whatsappTriggerEnabled,
           enabled: data.enabled ?? DEFAULT_SETTINGS.enabled,
         }));
       }
@@ -228,6 +231,8 @@ export const useSOSSettings = () => {
         voice_alert_enabled: completeSettings.voiceAlertEnabled,
         voice_password: completeSettings.voicePassword,
         sms_trigger_enabled: completeSettings.smsTriggerEnabled,
+        whatsapp_trigger_enabled: completeSettings.whatsappTriggerEnabled,
+        whatsapp_message: completeSettings.whatsappMessage,
         shake_count: completeSettings.shakeCount,
         cooldown_period: completeSettings.cooldownPeriod,
         enabled: completeSettings.enabled,
@@ -264,7 +269,8 @@ export const useSOSSettings = () => {
         voice_alert_enabled: updated.voiceAlertEnabled,
         voice_password: updated.voicePassword,
         sms_trigger_enabled: updated.smsTriggerEnabled,
-        // Newly persisted fields
+        whatsapp_trigger_enabled: updated.whatsappTriggerEnabled,
+        whatsapp_message: updated.whatsappMessage,
         shake_count: updated.shakeCount,
         cooldown_period: updated.cooldownPeriod,
         enabled: updated.enabled,
@@ -336,6 +342,10 @@ export const useSOSSettings = () => {
 
   const updateSmsTriggerEnabled = (enabled: boolean) => {
     saveSettings({ smsTriggerEnabled: enabled });
+  };
+
+  const updateWhatsAppTriggerEnabled = (enabled: boolean) => {
+    saveSettings({ whatsappTriggerEnabled: enabled });
   };
 
   const updateCooldownPeriod = (period: number) => {
@@ -565,6 +575,7 @@ export const useSOSSettings = () => {
     updateVoiceAlertEnabled,
     updateVoicePassword,
     updateSmsTriggerEnabled,
+    updateWhatsAppTriggerEnabled,
     updateCooldownPeriod,
     addContact,
     removeContact,

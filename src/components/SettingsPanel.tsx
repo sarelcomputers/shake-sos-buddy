@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MessageSquare, Gauge, Hash, Shield, Mail, Save } from 'lucide-react';
+import { MessageSquare, Gauge, Hash, Shield, Mail, Save, MessageCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,18 +14,24 @@ interface SettingsPanelProps {
   testMessage: string;
   emailMessage: string;
   testEmailMessage: string;
+  whatsappMessage: string;
+  testWhatsAppMessage: string;
   sensitivity: number;
   shakeCount: number;
   smsTriggerEnabled: boolean;
+  whatsappTriggerEnabled: boolean;
   cooldownPeriod: number;
   onSaveSettings: (settings: {
     message: string;
     testMessage: string;
     emailMessage: string;
     testEmailMessage: string;
+    whatsappMessage: string;
+    testWhatsAppMessage: string;
     sensitivity: number;
     shakeCount: number;
     smsTriggerEnabled: boolean;
+    whatsappTriggerEnabled: boolean;
     cooldownPeriod: number;
   }) => void;
 }
@@ -35,9 +41,12 @@ export const SettingsPanel = ({
   testMessage,
   emailMessage,
   testEmailMessage,
+  whatsappMessage,
+  testWhatsAppMessage,
   sensitivity,
   shakeCount,
   smsTriggerEnabled,
+  whatsappTriggerEnabled,
   cooldownPeriod,
   onSaveSettings,
 }: SettingsPanelProps) => {
@@ -46,9 +55,12 @@ export const SettingsPanel = ({
   const [localTestMessage, setLocalTestMessage] = useState(testMessage);
   const [localEmailMessage, setLocalEmailMessage] = useState(emailMessage);
   const [localTestEmailMessage, setLocalTestEmailMessage] = useState(testEmailMessage);
+  const [localWhatsAppMessage, setLocalWhatsAppMessage] = useState(whatsappMessage);
+  const [localTestWhatsAppMessage, setLocalTestWhatsAppMessage] = useState(testWhatsAppMessage);
   const [localSensitivity, setLocalSensitivity] = useState(sensitivity);
   const [localShakeCount, setLocalShakeCount] = useState<number>(shakeCount);
   const [localSmsTriggerEnabled, setLocalSmsTriggerEnabled] = useState(smsTriggerEnabled);
+  const [localWhatsAppTriggerEnabled, setLocalWhatsAppTriggerEnabled] = useState(whatsappTriggerEnabled);
   const [localCooldownPeriod, setLocalCooldownPeriod] = useState(cooldownPeriod);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -59,11 +71,14 @@ export const SettingsPanel = ({
     setLocalTestMessage(testMessage);
     setLocalEmailMessage(emailMessage);
     setLocalTestEmailMessage(testEmailMessage);
+    setLocalWhatsAppMessage(whatsappMessage);
+    setLocalTestWhatsAppMessage(testWhatsAppMessage);
     setLocalSensitivity(sensitivity);
     setLocalShakeCount(Number(shakeCount));
     setLocalSmsTriggerEnabled(smsTriggerEnabled);
+    setLocalWhatsAppTriggerEnabled(whatsappTriggerEnabled);
     setLocalCooldownPeriod(cooldownPeriod);
-  }, [message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, smsTriggerEnabled, cooldownPeriod]);
+  }, [message, testMessage, emailMessage, testEmailMessage, whatsappMessage, testWhatsAppMessage, sensitivity, shakeCount, smsTriggerEnabled, whatsappTriggerEnabled, cooldownPeriod]);
 
   // Check for unsaved changes
   useEffect(() => {
@@ -72,13 +87,16 @@ export const SettingsPanel = ({
       localTestMessage !== testMessage ||
       localEmailMessage !== emailMessage ||
       localTestEmailMessage !== testEmailMessage ||
+      localWhatsAppMessage !== whatsappMessage ||
+      localTestWhatsAppMessage !== testWhatsAppMessage ||
       localSensitivity !== sensitivity ||
       localShakeCount !== shakeCount ||
       localSmsTriggerEnabled !== smsTriggerEnabled ||
+      localWhatsAppTriggerEnabled !== whatsappTriggerEnabled ||
       localCooldownPeriod !== cooldownPeriod;
     
     setHasUnsavedChanges(changed);
-  }, [localMessage, localTestMessage, localEmailMessage, localTestEmailMessage, localSensitivity, localShakeCount, localSmsTriggerEnabled, localCooldownPeriod, message, testMessage, emailMessage, testEmailMessage, sensitivity, shakeCount, smsTriggerEnabled, cooldownPeriod]);
+  }, [localMessage, localTestMessage, localEmailMessage, localTestEmailMessage, localWhatsAppMessage, localTestWhatsAppMessage, localSensitivity, localShakeCount, localSmsTriggerEnabled, localWhatsAppTriggerEnabled, localCooldownPeriod, message, testMessage, emailMessage, testEmailMessage, whatsappMessage, testWhatsAppMessage, sensitivity, shakeCount, smsTriggerEnabled, whatsappTriggerEnabled, cooldownPeriod]);
 
   const handleSave = () => {
     onSaveSettings({
@@ -86,9 +104,12 @@ export const SettingsPanel = ({
       testMessage: localTestMessage,
       emailMessage: localEmailMessage,
       testEmailMessage: localTestEmailMessage,
+      whatsappMessage: localWhatsAppMessage,
+      testWhatsAppMessage: localTestWhatsAppMessage,
       sensitivity: localSensitivity,
       shakeCount: localShakeCount,
       smsTriggerEnabled: localSmsTriggerEnabled,
+      whatsappTriggerEnabled: localWhatsAppTriggerEnabled,
       cooldownPeriod: localCooldownPeriod,
     });
   };
@@ -119,6 +140,25 @@ export const SettingsPanel = ({
             </div>
             <p className="text-xs text-muted-foreground">
               Enable or disable SMS alerts when SOS is triggered
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-green-500" />
+                <Label htmlFor="whatsappTrigger" className="text-base font-semibold">
+                  WhatsApp Emergency Alerts
+                </Label>
+              </div>
+              <Switch
+                id="whatsappTrigger"
+                checked={localWhatsAppTriggerEnabled}
+                onCheckedChange={setLocalWhatsAppTriggerEnabled}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enable or disable WhatsApp alerts when SOS is triggered
             </p>
           </div>
 

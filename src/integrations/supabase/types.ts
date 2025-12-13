@@ -415,6 +415,8 @@ export type Database = {
           user_id: string
           voice_alert_enabled: boolean
           voice_password: string | null
+          whatsapp_message: string | null
+          whatsapp_trigger_enabled: boolean | null
         }
         Insert: {
           cooldown_period?: number
@@ -434,6 +436,8 @@ export type Database = {
           user_id: string
           voice_alert_enabled?: boolean
           voice_password?: string | null
+          whatsapp_message?: string | null
+          whatsapp_trigger_enabled?: boolean | null
         }
         Update: {
           cooldown_period?: number
@@ -453,6 +457,8 @@ export type Database = {
           user_id?: string
           voice_alert_enabled?: boolean
           voice_password?: string | null
+          whatsapp_message?: string | null
+          whatsapp_trigger_enabled?: boolean | null
         }
         Relationships: [
           {
