@@ -238,6 +238,44 @@ export const SettingsPanel = ({
             </p>
           </div>
 
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-green-500" />
+              <Label htmlFor="whatsappMessage" className="text-base font-semibold">
+                Emergency Message (WhatsApp)
+              </Label>
+            </div>
+            <Textarea
+              id="whatsappMessage"
+              value={localWhatsAppMessage}
+              onChange={(e) => setLocalWhatsAppMessage(e.target.value)}
+              placeholder="Enter your emergency WhatsApp message..."
+              className="min-h-[100px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              This message will be sent via WhatsApp with your location and personal info
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-green-500" />
+              <Label htmlFor="testWhatsAppMessage" className="text-base font-semibold">
+                Test Message (WhatsApp)
+              </Label>
+            </div>
+            <Textarea
+              id="testWhatsAppMessage"
+              value={localTestWhatsAppMessage}
+              onChange={(e) => setLocalTestWhatsAppMessage(e.target.value)}
+              placeholder="Enter your test WhatsApp message..."
+              className="min-h-[100px] resize-none"
+            />
+            <p className="text-xs text-muted-foreground">
+              This message will be sent when you test a WhatsApp contact
+            </p>
+          </div>
+
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Gauge className="w-5 h-5 text-primary" />
