@@ -1,9 +1,9 @@
 import type { CapacitorConfig } from '@capacitor/core';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.5cb83c0c55a84b36a981495f8680a735',
-  appName: 'Alfa22 SOS',
-  webDir: 'dist'
+//  appId: 'app.lovable.5cb83c0c55a84b36a981495f8680a735',
+//  appName: 'Alfa22 SOS',
+//  webDir: 'dist'
       plugins: {
     KeepAwake: {
       enabled: true
