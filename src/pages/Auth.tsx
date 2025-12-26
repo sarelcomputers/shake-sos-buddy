@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
 import logo from '@/assets/alfa22-logo.png';
 import { getDeviceId, isDeviceRegistered, registerDevice } from '@/utils/deviceRegistration';
 
@@ -19,6 +19,8 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adminPin, setAdminPin] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
 
   useEffect(() => {
     // Check if already logged in
@@ -157,6 +159,52 @@ export default function Auth() {
     }
   };
 
+  const handleAdminPinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!adminPin.trim()) {
+      toast.error('Please enter an admin PIN');
+      return;
+    }
+
+    setPinLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please login first, then enter the admin PIN');
+        setPinLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-admin-pin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ pin: adminPin }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Admin access granted! You now have full app access.');
+        setAdminPin('');
+        navigate('/');
+      } else {
+        toast.error(data.error || 'Invalid PIN');
+      }
+    } catch (error: any) {
+      console.error('Error validating admin PIN:', error);
+      toast.error('Failed to validate PIN');
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
       <Card className="w-full max-w-md">
@@ -241,6 +289,42 @@ export default function Auth() {
                 : 'Sign Up'}
             </Button>
           </form>
+
+          {/* Admin PIN Section - shown on login screen */}
+          {isLogin && !isForgotPassword && !isResettingPassword && (
+            <form onSubmit={handleAdminPinSubmit} className="mt-6 pt-4 border-t space-y-3">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-primary" />
+                <Label className="text-sm font-medium">Admin Access</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Have an admin PIN? Enter it after logging in to unlock full access.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={adminPin}
+                  onChange={(e) => setAdminPin(e.target.value)}
+                  placeholder="Enter admin PIN"
+                  disabled={pinLoading}
+                  className="flex-1"
+                />
+                <Button
+                  type="submit"
+                  disabled={pinLoading || !adminPin.trim()}
+                  variant="outline"
+                  size="default"
+                >
+                  {pinLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <KeyRound className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+
           <div className="mt-4 space-y-2 text-center text-sm">
             {!isResettingPassword && !isForgotPassword && (
               <>
