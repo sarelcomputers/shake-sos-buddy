@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Lock, CreditCard, Clock } from 'lucide-react';
+import { Lock, CreditCard, Clock, LogOut } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -11,7 +11,12 @@ const PAYFAST_URL = 'https://www.payfast.co.za/eng/process';
 
 export const SubscriptionGate = () => {
   const { subscription, loading, hasAccess } = useSubscription();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    window.location.href = '/auth';
+  };
 
   const handleSubscribe = () => {
     if (!user || !subscription) return;
@@ -148,9 +153,20 @@ export const SubscriptionGate = () => {
             Subscribe Now
           </Button>
 
-          <p className="text-xs text-center text-muted-foreground">
-            Secure payment powered by PayFast
-          </p>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="w-full"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout / Switch Account
+            </Button>
+            
+            <p className="text-xs text-center text-muted-foreground">
+              Secure payment powered by PayFast
+            </p>
+          </div>
         </Card>
       </motion.div>
     </div>
