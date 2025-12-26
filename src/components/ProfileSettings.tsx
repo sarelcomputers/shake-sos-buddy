@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Lock, Save, Shield, Moon, Sun, CreditCard, Crown, LogOut } from 'lucide-react';
+import { User, Mail, Lock, Save, Shield, Moon, Sun, CreditCard, Crown, LogOut, KeyRound } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -23,6 +23,8 @@ export const ProfileSettings = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adminPin, setAdminPin] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
 
   const handleUpdateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +104,54 @@ export const ProfileSettings = () => {
     setTimeout(() => {
       window.location.reload();
     }, 2000);
+  };
+
+  const handleAdminPinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!adminPin.trim()) {
+      toast.error('Please enter an admin PIN');
+      return;
+    }
+
+    setPinLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Not authenticated');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/validate-admin-pin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ pin: adminPin }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Admin access granted! You now have full app access.');
+        setAdminPin('');
+        // Reload to update subscription status
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        toast.error(data.error || 'Invalid PIN');
+      }
+    } catch (error: any) {
+      console.error('Error validating admin PIN:', error);
+      toast.error('Failed to validate PIN');
+    } finally {
+      setPinLoading(false);
+    }
   };
 
   return (
@@ -270,6 +320,44 @@ export const ProfileSettings = () => {
               Manage Subscription & Billing
             </Button>
           </div>
+
+          {/* Admin PIN Access */}
+          <form onSubmit={handleAdminPinSubmit} className="space-y-3 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              <Label className="text-base font-semibold">Admin Access</Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Enter the admin PIN code to unlock full app access.
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                value={adminPin}
+                onChange={(e) => setAdminPin(e.target.value)}
+                placeholder="Enter admin PIN"
+                disabled={pinLoading}
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={pinLoading || !adminPin.trim()}
+              className="w-full"
+              variant="outline"
+            >
+              {pinLoading ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                  Validating...
+                </>
+              ) : (
+                <>
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Submit Admin PIN
+                </>
+              )}
+            </Button>
+          </form>
 
           {/* Dark Mode Toggle */}
           <div className="space-y-3 pt-4 border-t">
