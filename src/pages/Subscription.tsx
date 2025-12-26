@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CreditCard, Calendar, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CreditCard, Calendar, CheckCircle, XCircle, AlertCircle, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -28,7 +28,7 @@ const PAYFAST_URL = 'https://www.payfast.co.za/eng/process';
 export default function Subscription() {
   const navigate = useNavigate();
   const { subscription, loading } = useSubscription();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -82,6 +82,11 @@ export default function Subscription() {
     } finally {
       setCancelling(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   const handleUpdatePayment = () => {
@@ -176,10 +181,18 @@ export default function Subscription() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold">Subscription Management</h1>
             <p className="text-muted-foreground">Manage your billing and subscription</p>
           </div>
+          <Button
+            variant="outline"
+            onClick={handleLogout}
+            className="gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
         </motion.div>
 
         {/* Current Subscription Status */}
