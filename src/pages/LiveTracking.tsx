@@ -246,17 +246,11 @@ export default function LiveTracking() {
         console.log('LiveTracking: SOS data found:', sos);
         setSOSData(sos);
         
-        // Set up activity check based on fetched data (1 hour tracking window)
+        // Initial activity check - will be updated when locations load
         const sosTime = new Date(sos.triggered_at).getTime();
         const now = Date.now();
         const oneHour = 60 * 60 * 1000;
         setIsActive(now - sosTime < oneHour);
-
-        // Update active status every 10 seconds
-        interval = setInterval(() => {
-          const currentTime = Date.now();
-          setIsActive(currentTime - sosTime < oneHour);
-        }, 10000);
 
         const { data: locs, error: locsError } = await publicSupabase
           .from('location_tracking')
@@ -269,7 +263,34 @@ export default function LiveTracking() {
         } else {
           console.log('LiveTracking: Locations found:', locs?.length || 0);
           setLocations(locs || []);
+          
+          // Determine active status based on most recent location update
+          // Tracking is active if last location update was within the last 1 hour
+          if (locs && locs.length > 0) {
+            const lastLocation = locs[locs.length - 1];
+            const lastUpdateTime = new Date(lastLocation.timestamp).getTime();
+            const oneHour = 60 * 60 * 1000;
+            setIsActive(Date.now() - lastUpdateTime < oneHour);
+          }
         }
+        
+        // Update active status every 10 seconds based on latest location
+        interval = setInterval(() => {
+          setLocations(currentLocs => {
+            if (currentLocs.length > 0) {
+              const lastLoc = currentLocs[currentLocs.length - 1];
+              const lastUpdateTime = new Date(lastLoc.timestamp).getTime();
+              const oneHour = 60 * 60 * 1000;
+              // Consider active if last update was within 2 minutes (for real-time feel)
+              // or if the SOS was triggered within 1 hour and we're expecting more updates
+              const sosTime = new Date(sos.triggered_at).getTime();
+              const isWithinTrackingWindow = Date.now() - sosTime < oneHour;
+              const hasRecentUpdate = Date.now() - lastUpdateTime < 2 * 60 * 1000; // 2 minutes
+              setIsActive(isWithinTrackingWindow || hasRecentUpdate);
+            }
+            return currentLocs;
+          });
+        }, 10000);
         
         setLoading(false);
       } catch (error) {

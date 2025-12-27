@@ -596,12 +596,63 @@ const Index = () => {
   const sendEnhancedEmergencyEmails = async (message: string, contacts: EmailContact[], userId: string) => {
     // Import simplified SOS utilities
     const { captureSimplifiedSOSData } = await import('@/utils/enhancedSOS');
-    const { startLocationTracking, generateTrackingUrl } = await import('@/utils/locationTracking');
+    const { startLocationTracking, generateTrackingUrl, isTrackingActive, extendTrackingWindow, getCurrentTrackingSosId } = await import('@/utils/locationTracking');
     const { Device } = await import('@capacitor/device');
     const { Network } = await import('@capacitor/network');
     const { Geolocation } = await import('@capacitor/geolocation');
 
     try {
+      // Check if tracking is already active - if so, extend the window and send a follow-up alert
+      if (isTrackingActive()) {
+        const existingSosId = getCurrentTrackingSosId();
+        console.log('📍 Tracking already active for SOS:', existingSosId);
+        console.log('🔄 Extending tracking window by 1 hour');
+        
+        await extendTrackingWindow(60);
+        
+        // Get current location for the follow-up alert
+        const position = await Geolocation.getCurrentPosition();
+        const { latitude, longitude } = position.coords;
+        const locationUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+        const trackingUrl = existingSosId ? generateTrackingUrl(existingSosId) : '';
+        
+        // Insert a new location point immediately
+        if (existingSosId) {
+          await supabase
+            .from('location_tracking')
+            .insert({
+              sos_history_id: existingSosId,
+              user_id: userId,
+              latitude,
+              longitude,
+              accuracy: position.coords.accuracy,
+              speed: position.coords.speed,
+              heading: position.coords.heading,
+              altitude: position.coords.altitude,
+              timestamp: new Date(position.timestamp).toISOString()
+            });
+        }
+        
+        // Send follow-up alert to contacts
+        await Promise.allSettled(
+          contacts.map(contact =>
+            supabase.functions.invoke('send-emergency-email', {
+              body: {
+                to: contact.email,
+                name: contact.name,
+                subject: '🚨 FOLLOW-UP: Emergency Alert Extended',
+                message: `FOLLOW-UP ALERT: ${message}\n\nThe person is still in an emergency situation. Tracking has been extended by 1 hour.`,
+                location: locationUrl,
+                trackingUrl: trackingUrl,
+              },
+            })
+          )
+        );
+        
+        toast({ title: 'Emergency Extended', description: 'Tracking extended by 1 hour. Contacts notified.' });
+        return;
+      }
+
       // Get current location
       const position = await Geolocation.getCurrentPosition();
       const { latitude, longitude } = position.coords;
