@@ -37,8 +37,8 @@ import { startForegroundService, stopForegroundService, isForegroundServiceAvail
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { hasAccess, loading: subscriptionLoading, subscription } = useSubscription();
-  const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const { hasAccess, loading: subscriptionLoading, subscription, isAdmin } = useSubscription();
+  const { loading: adminLoading } = useAdminCheck();
   const {
     settings,
     loading,
@@ -804,6 +804,7 @@ const Index = () => {
         <SubscriptionStatus
           subscription={subscription}
           loading={subscriptionLoading}
+          isAdmin={isAdmin}
         />
 
         {/* Tabs */}

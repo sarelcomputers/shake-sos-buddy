@@ -20,6 +20,7 @@ export const useSubscription = () => {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -29,16 +30,34 @@ export const useSubscription = () => {
 
     const fetchSubscription = async () => {
       try {
+        // First check if user is admin - admins get full access
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+
+        if (roleData) {
+          setIsAdmin(true);
+          setHasAccess(true);
+          // Still fetch subscription for display purposes
+        }
+
         const { data, error } = await supabase
           .from('subscriptions')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
           console.error('Error fetching subscription:', error);
+          // If admin, still grant access even if subscription fetch fails
+          if (roleData) {
+            setHasAccess(true);
+          }
           setLoading(false);
           return;
         }
@@ -57,6 +76,10 @@ export const useSubscription = () => {
 
           if (createError) {
             console.error('Error creating subscription:', createError);
+            // If admin, still grant access
+            if (roleData) {
+              setHasAccess(true);
+            }
             setLoading(false);
             return;
           }
@@ -66,15 +89,20 @@ export const useSubscription = () => {
         } else {
           setSubscription(data as Subscription);
           
-          // Check if user has access
-          const now = new Date();
-          const trialEnds = new Date(data.trial_ends_at);
-          const periodEnds = data.current_period_end ? new Date(data.current_period_end) : null;
+          // Admin users always have access
+          if (roleData) {
+            setHasAccess(true);
+          } else {
+            // Check if user has access based on subscription
+            const now = new Date();
+            const trialEnds = new Date(data.trial_ends_at);
+            const periodEnds = data.current_period_end ? new Date(data.current_period_end) : null;
 
-          const inTrial = data.status === 'trial' && now < trialEnds;
-          const activeSubscription = data.status === 'active' && periodEnds && now < periodEnds;
+            const inTrial = data.status === 'trial' && now < trialEnds;
+            const activeSubscription = data.status === 'active' && periodEnds && now < periodEnds;
 
-          setHasAccess(inTrial || activeSubscription);
+            setHasAccess(inTrial || activeSubscription);
+          }
         }
 
         setLoading(false);
@@ -109,5 +137,5 @@ export const useSubscription = () => {
     };
   }, [user]);
 
-  return { subscription, loading, hasAccess };
+  return { subscription, loading, hasAccess, isAdmin };
 };

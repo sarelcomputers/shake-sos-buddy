@@ -10,7 +10,7 @@ const PAYFAST_MERCHANT_KEY = 'vgqtxddfdvzcv';
 const PAYFAST_URL = 'https://www.payfast.co.za/eng/process';
 
 export const SubscriptionGate = () => {
-  const { subscription, loading, hasAccess } = useSubscription();
+  const { subscription, loading, hasAccess, isAdmin } = useSubscription();
   const { user, signOut } = useAuth();
 
   const handleLogout = async () => {
@@ -72,8 +72,8 @@ export const SubscriptionGate = () => {
     );
   }
 
-  if (hasAccess) {
-    return null; // User has access, don't show gate
+  if (hasAccess || isAdmin) {
+    return null; // User has access (including admins), don't show gate
   }
 
   const daysRemaining = subscription 
