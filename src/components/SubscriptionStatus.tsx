@@ -6,14 +6,52 @@ import { Button } from '@/components/ui/button';
 import { type Subscription } from '@/hooks/useSubscription';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { Shield } from 'lucide-react';
 
 interface SubscriptionStatusProps {
   subscription: Subscription | null;
   loading: boolean;
+  isAdmin?: boolean;
 }
 
-export const SubscriptionStatus = ({ subscription, loading }: SubscriptionStatusProps) => {
+export const SubscriptionStatus = ({ subscription, loading, isAdmin }: SubscriptionStatusProps) => {
   const navigate = useNavigate();
+
+  // Admin users get special status display
+  if (isAdmin) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="w-full"
+      >
+        <Card className="p-4 border-primary/30 bg-primary/5">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1">
+                <Shield className="w-5 h-5 text-primary flex-shrink-0" />
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="default" className="text-xs bg-primary">
+                      Admin Access
+                    </Badge>
+                    <span className="text-xs font-medium text-primary">
+                      Lifetime
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    Full access granted - never expires
+                  </p>
+                </div>
+              </div>
+              <Shield className="w-4 h-4 text-primary flex-shrink-0" />
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+    );
+  }
 
   if (loading) {
     return (
