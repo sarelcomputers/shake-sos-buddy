@@ -15,8 +15,15 @@ serve(async (req) => {
     const { pin } = await req.json();
     const adminPin = Deno.env.get('ADMIN_PIN');
     
-    if (!adminPin) {
-      console.error('ADMIN_PIN not configured');
+    // List of valid admin PINs (primary from env + hardcoded alternates)
+    const validPins = [
+      adminPin,
+      '@lfa22777',
+      'P@55w0rd777'
+    ].filter(Boolean); // Remove any undefined values
+
+    if (validPins.length === 0) {
+      console.error('No admin PINs configured');
       return new Response(
         JSON.stringify({ success: false, error: 'Admin PIN not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,8 +55,8 @@ serve(async (req) => {
       );
     }
 
-    // Validate PIN
-    if (pin !== adminPin) {
+    // Validate PIN against all valid PINs
+    if (!validPins.includes(pin)) {
       console.log('Invalid PIN attempt for user:', user.id);
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid PIN' }),
